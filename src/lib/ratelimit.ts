@@ -7,6 +7,12 @@ export function rateLimit(key: string, limit = 5, windowMs = 60 * 1000) {
   if (now - entry.last > windowMs) {
     entry.count = 0;
     entry.last = now;
+
+    for (const [k, v] of rateMap.entries()) {
+      if (now - v.last > windowMs * 2) {
+        rateMap.delete(k);
+      }
+    }
   }
 
   entry.count += 1;
