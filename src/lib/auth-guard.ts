@@ -1,32 +1,31 @@
 import { cookies } from "next/headers";
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { verifyAccessToken } from "./jwt";
-import type { JwtPayload } from "jsonwebtoken";
-
-type UserPayload = JwtPayload & { role?: string; sub?: string };
+import type { TokenPayload } from "./jwt";
 
 /**
- * Used inside API routes (App Router).
+ * Use inside App Router API routes / server functions:
+ * const user = await getUserFromApiRoute();
  */
-export async function getUserFromApiRoute() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("accessToken")?.value;
-  if (!token) return null;
+export async function getUserFromApiRoute(): Promise<TokenPayload | null> {
   try {
-    return verifyAccessToken(token) as UserPayload;
+    const cookieStore = await cookies();
+    const token = cookieStore.get("accessToken")?.value;
+    if (!token) return null;
+    return verifyAccessToken(token);
   } catch {
     return null;
   }
 }
 
 /**
- * Used inside middleware.ts
+ * Use inside middleware (NextRequest)
  */
-export function getUserFromMiddleware(req: NextRequest) {
-  const token = req.cookies.get("accessToken")?.value;
-  if (!token) return null;
+export function getUserFromMiddleware(req: NextRequest): TokenPayload | null {
   try {
-    return verifyAccessToken(token) as UserPayload;
+    const token = req.cookies.get("accessToken")?.value;
+    if (!token) return null;
+    return verifyAccessToken(token);
   } catch {
     return null;
   }

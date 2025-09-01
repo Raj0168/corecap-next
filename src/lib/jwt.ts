@@ -1,20 +1,30 @@
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
+import { config } from "../config";
 
-const ACCESS_SECRET = process.env.ACCESS_TOKEN_SECRET!;
-const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET!;
+export type TokenPayload = {
+  id: string;
+  role: string;
+  type?: "access" | "refresh";
+  iat?: number;
+  exp?: number;
+};
 
-export function signAccessToken(payload: object) {
-  return jwt.sign(payload, ACCESS_SECRET, { expiresIn: "15m" });
+export function signAccessToken(payload: { id: string; role: string }) {
+  return jwt.sign({ ...payload, type: "access" }, config.accessTokenSecret, {
+    expiresIn: "15m",
+  });
 }
 
-export function signRefreshToken(payload: object) {
-  return jwt.sign(payload, REFRESH_SECRET, { expiresIn: "7d" });
+export function signRefreshToken(payload: { id: string; role: string }) {
+  return jwt.sign({ ...payload, type: "refresh" }, config.refreshTokenSecret, {
+    expiresIn: "7d",
+  });
 }
 
-export function verifyAccessToken(token: string) {
-  return jwt.verify(token, ACCESS_SECRET);
+export function verifyAccessToken(token: string): TokenPayload {
+  return jwt.verify(token, config.accessTokenSecret) as TokenPayload;
 }
 
-export function verifyRefreshToken(token: string) {
-  return jwt.verify(token, REFRESH_SECRET);
+export function verifyRefreshToken(token: string): TokenPayload {
+  return jwt.verify(token, config.refreshTokenSecret) as TokenPayload;
 }

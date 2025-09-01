@@ -1,19 +1,22 @@
 import mongoose from "mongoose";
+import { config } from "../config";
 
-const MONGODB_URI = process.env.MONGODB_URI!;
+declare global {
+  var _mongoClientPromise: any;
+}
 
-if (!MONGODB_URI) throw new Error("MONGODB_URI is not defined");
-
-let cached = (global as any).mongoose;
-if (!cached) cached = (global as any).mongoose = { conn: null, promise: null };
+let cached = (global as any)._mongoClientPromise;
 
 export default async function connectDB() {
-  if (cached.conn) return cached.conn;
+  if (cached) return cached;
 
-  if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGODB_URI).then((mongoose) => mongoose);
-  }
+  if (!config.mongoUri) throw new Error("MONGODB_URI not provided in config");
 
-  cached.conn = await cached.promise;
-  return cached.conn;
+  cached = mongoose.connect(config.mongoUri, {}).then((m) => {
+    console.log("MongoDB connected");
+    return m;
+  });
+
+  (global as any)._mongoClientPromise = cached;
+  return cached;
 }

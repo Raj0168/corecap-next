@@ -6,8 +6,10 @@ import { rateLimit } from "../lib/ratelimit";
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
 
-  console.log("Middleware running:", req.nextUrl.pathname);
+  // debug:
+  console.log("Middleware running for:", url.pathname);
 
+  // Protect admin area
   if (url.pathname.startsWith("/api/admin")) {
     const user = getUserFromMiddleware(req);
     if (!user || user.role !== "admin") {
@@ -15,6 +17,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  // Rate limit OTP endpoint
   if (url.pathname === "/api/notifications/send-otp") {
     const ip = req.headers.get("x-forwarded-for") || "unknown";
     try {
