@@ -1,4 +1,3 @@
-// src/app/api/oauth/google/callback/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import connectDB from "@/lib/db";
@@ -44,7 +43,6 @@ export async function GET(req: Request) {
       );
     }
 
-    // Find or create user
     let userDoc = await User.findOne({ email });
 
     if (!userDoc) {
@@ -54,15 +52,13 @@ export async function GET(req: Request) {
         email,
         provider: "google",
         isEmailVerified: email_verified ?? true,
-        password: null, // OAuth users do not have a password
+        password: null,
       });
     } else {
-      // Optionally mark verified if Google confirms email
       if (email_verified && !userDoc.isEmailVerified) {
         userDoc.isEmailVerified = true;
         await userDoc.save();
       }
-      // We do NOT override provider if the account already exists (e.g., "credentials")
     }
 
     // Issue our own session cookies

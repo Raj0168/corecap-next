@@ -17,7 +17,6 @@ export default function DashboardPage() {
         if (res.ok && json.ok) {
           setUser(json.user);
         } else {
-          // unauthorized -> redirect to login
           window.location.href = "/auth/login";
         }
       } catch (err) {

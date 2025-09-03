@@ -14,7 +14,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  // Helper for fetch with JSON & credentials included (cookies)
   async function api(path: string, body: any) {
     const res = await fetch(path, {
       method: "POST",
@@ -80,7 +79,6 @@ export default function LoginPage() {
     try {
       const { ok, data } = await api("/api/auth/login", { email, password });
       if (ok) {
-        // cookies set by backend; redirect to dashboard
         window.location.href = "/dashboard";
       } else {
         setMsg(data?.error || "Login failed");
@@ -137,7 +135,6 @@ export default function LoginPage() {
   }
 
   function handleGoogle() {
-    // Use your backend start route which sets state cookie and redirects to Google
     window.location.href = "/api/auth/oauth/google/start";
   }
 
