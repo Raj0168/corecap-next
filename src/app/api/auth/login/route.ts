@@ -29,6 +29,13 @@ export async function POST(req: Request) {
       );
     }
 
+    if (!user.isEmailVerified) {
+      return NextResponse.json(
+        { error: "Please verify your email before logging in." },
+        { status: 403 }
+      );
+    }
+
     const userAgent = req.headers.get("user-agent") ?? null;
 
     // Prefer x-forwarded-for (proxies), fallback to x-real-ip
