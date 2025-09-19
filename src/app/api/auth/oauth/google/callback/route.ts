@@ -61,7 +61,6 @@ export async function GET(req: Request) {
       }
     }
 
-    // Issue our own session cookies
     const jti = uid();
     const accessToken = signAccessToken({
       id: userDoc._id.toString(),

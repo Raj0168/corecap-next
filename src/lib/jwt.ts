@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { config } from "../config";
 
 export type TokenPayload = {
+  _id: unknown;
   id: string;
   role: string;
   jti?: string;
