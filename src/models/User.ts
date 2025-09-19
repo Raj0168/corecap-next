@@ -1,12 +1,25 @@
 import mongoose, { Schema, Document, models } from "mongoose";
 
 export interface IUser extends Document {
+  _id: mongoose.Types.ObjectId;
   name: string;
   email: string;
-  password?: string;
+  password?: string | null;
   role: "user" | "admin";
   isEmailVerified: boolean;
   provider: "credentials" | "google" | "github";
+  purchasedCourses?: mongoose.Types.ObjectId[];
+  purchasedChapters?: mongoose.Types.ObjectId[];
+  progress?: {
+    chapterId: mongoose.Types.ObjectId;
+    completed: boolean;
+    updatedAt: Date;
+  }[];
+  bookmarks?: {
+    chapterId: mongoose.Types.ObjectId;
+    note?: string;
+    createdAt: Date;
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,6 +36,22 @@ const UserSchema = new Schema<IUser>(
       enum: ["credentials", "google", "github"],
       default: "credentials",
     },
+    purchasedCourses: [{ type: Schema.Types.ObjectId, ref: "Course" }],
+    purchasedChapters: [{ type: Schema.Types.ObjectId, ref: "Chapter" }],
+    progress: [
+      {
+        chapterId: { type: Schema.Types.ObjectId, ref: "Chapter" },
+        completed: { type: Boolean, default: false },
+        updatedAt: { type: Date, default: Date.now },
+      },
+    ],
+    bookmarks: [
+      {
+        chapterId: { type: Schema.Types.ObjectId, ref: "Chapter" },
+        note: { type: String },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   { timestamps: true }
 );
