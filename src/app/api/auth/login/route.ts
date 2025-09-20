@@ -3,7 +3,7 @@ import connectDB from "@/lib/db";
 import { User } from "@/models/User";
 import { comparePassword } from "@/lib/crypto";
 import { loginSchema } from "@/lib/validator";
-import { issueTokensAndStore } from "@/lib/session";
+import { issueTokensAndStore, revokeUserSessions } from "@/lib/session";
 
 export async function POST(req: Request) {
   try {
@@ -37,15 +37,14 @@ export async function POST(req: Request) {
     }
 
     const userAgent = req.headers.get("user-agent") ?? null;
-
-    // Prefer x-forwarded-for (proxies), fallback to x-real-ip
     const ipHeader =
       req.headers.get("x-forwarded-for") ??
       req.headers.get("x-real-ip") ??
       null;
     const ip = ipHeader ? ipHeader.split(",")[0].trim() : null;
 
-    // Issue tokens and store refresh session in DB
+    await revokeUserSessions(user._id.toString());
+
     return await issueTokensAndStore({
       user: { id: user._id.toString(), role: user.role },
       ip,
