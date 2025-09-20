@@ -19,10 +19,12 @@ export async function issueTokensAndStore(opts: {
 
   const { user, ip = null, userAgent = null } = opts;
   const jti = uid();
+
   const accessToken = signAccessToken({ id: user.id, role: user.role });
   const refreshToken = signRefreshToken({ id: user.id, role: user.role, jti });
 
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
   await RefreshTokenModel.create({
     userId: new (mongoose as any).Types.ObjectId(user.id),
     jti,
@@ -38,7 +40,7 @@ export async function issueTokensAndStore(opts: {
     httpOnly: true,
     secure: config.nodeEnv === "production",
     sameSite: "lax",
-    maxAge: 15 * 60,
+    maxAge: 30 * 60, // 15 minutes
     path: "/",
   });
 
@@ -46,18 +48,20 @@ export async function issueTokensAndStore(opts: {
     httpOnly: true,
     secure: config.nodeEnv === "production",
     sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60,
+    maxAge: 7 * 24 * 60 * 60, // 7 days
     path: "/",
   });
 
   return res;
 }
 
+/** Hard revoke a single refresh session by JTI */
 export async function revokeRefreshSessionByJti(jti: string) {
   await connectDB();
   await RefreshTokenModel.updateOne({ jti }, { revoked: true }).exec();
 }
 
+/** Revoke all sessions of a user (logout all devices) */
 export async function revokeUserSessions(userId: string) {
   await connectDB();
   await RefreshTokenModel.updateMany({ userId }, { revoked: true }).exec();
