@@ -1,11 +1,26 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import Course, { ICourse } from "@/models/Course";
 import { getUserFromApiRoute } from "@/lib/auth-guard";
 
-export async function GET(req: Request) {
+type CourseCreateBody = {
+  title: string;
+  slug: string;
+  description?: string;
+  price: number;
+  chapterPrice: number;
+  thumbnailUrl: string;
+  fullCoursePdfPath: string;
+  author: string;
+  pages: number;
+  schoolGrade: "10" | "11" | "12";
+  subject: string;
+};
+
+export async function GET(req: NextRequest) {
   try {
     await connectDB();
+
     const url = new URL(req.url);
     const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10));
     const limit = Math.min(
@@ -19,9 +34,8 @@ export async function GET(req: Request) {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .lean<ICourse[]>()
-        .exec(),
-      Course.countDocuments().exec(),
+        .lean<ICourse[]>(),
+      Course.countDocuments(),
     ]);
 
     return NextResponse.json({
@@ -33,7 +47,13 @@ export async function GET(req: Request) {
         price: c.price,
         chapterPrice: c.chapterPrice,
         thumbnailUrl: c.thumbnailUrl,
+        fullCoursePdfPath: c.fullCoursePdfPath,
+        author: c.author,
+        pages: c.pages,
+        schoolGrade: c.schoolGrade,
+        subject: c.subject,
         createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
       })),
       meta: { page, limit, total },
     });
@@ -46,41 +66,45 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     await connectDB();
     const user = await getUserFromApiRoute();
-    if (!user || user.role !== "admin") {
+    if (!user?.role || user.role !== "admin")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const body = (await req.json()) as CourseCreateBody;
+
+    const required = [
+      "title",
+      "slug",
+      "price",
+      "chapterPrice",
+      "fullCoursePdfPath",
+      "thumbnailUrl",
+      "pages",
+      "author",
+      "schoolGrade",
+      "subject",
+    ];
+    for (const f of required) {
+      if ((body as any)[f] === undefined || (body as any)[f] === null) {
+        return NextResponse.json(
+          { error: `Missing required field: ${f}` },
+          { status: 400 }
+        );
+      }
     }
 
-    const body = await req.json();
-    if (!body.title || !body.slug || typeof body.price !== "number") {
-      return NextResponse.json(
-        { error: "title, slug and price are required" },
-        { status: 400 }
-      );
-    }
-
-    const existing = await Course.findOne({ slug: body.slug })
-      .lean<ICourse>()
-      .exec();
+    const existing = await Course.findOne({ slug: body.slug }).lean();
     if (existing)
       return NextResponse.json(
-        { error: "slug already exists" },
+        { error: "Slug already exists" },
         { status: 409 }
       );
 
-    const course = await Course.create({
-      title: body.title,
-      slug: body.slug,
-      description: body.description ?? "",
-      price: body.price,
-      chapterPrice: body.chapterPrice ?? 0,
-      thumbnailUrl: body.thumbnailUrl ?? null,
-    });
-
-    return NextResponse.json({ id: course._id.toString() }, { status: 201 });
+    const created = await Course.create(body);
+    return NextResponse.json({ id: created._id.toString() }, { status: 201 });
   } catch (err: any) {
     console.error("POST /api/courses error:", err);
     return NextResponse.json(

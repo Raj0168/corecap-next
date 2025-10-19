@@ -1,38 +1,43 @@
-import mongoose, { Schema, Document, models } from "mongoose";
+import mongoose, { Schema, Document, models, Types } from "mongoose";
+
+export interface IPurchaseItem {
+  itemId: Types.ObjectId;
+  itemType: "course" | "chapter";
+  price: number;
+}
 
 export interface IPurchase extends Document {
-  _id: mongoose.Types.ObjectId;
-  userId: mongoose.Types.ObjectId;
-  courseId?: mongoose.Types.ObjectId;
-  chapterId?: mongoose.Types.ObjectId;
+  userId: Types.ObjectId;
+  items: IPurchaseItem[];
   amount: number;
-  status: "created" | "paid" | "failed" | "refunded";
-  paymentProvider: string;
-  providerOrderId?: string;
-  providerPaymentId?: string;
+  status: "created" | "paid" | "failed";
+  paymentProvider?: string;
+  providerPaymentId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
+const PurchaseItemSchema = new Schema<IPurchaseItem>(
+  {
+    itemId: { type: Schema.Types.ObjectId, required: true },
+    itemType: { type: String, enum: ["course", "chapter"], required: true },
+    price: { type: Number, required: true },
+  },
+  { _id: false }
+);
+
 const PurchaseSchema = new Schema<IPurchase>(
   {
-    userId: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true,
-    },
-    courseId: { type: Schema.Types.ObjectId, ref: "Course", default: null },
-    chapterId: { type: Schema.Types.ObjectId, ref: "Chapter", default: null },
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    items: { type: [PurchaseItemSchema], required: true },
     amount: { type: Number, required: true },
     status: {
       type: String,
-      enum: ["created", "paid", "failed", "refunded"],
+      enum: ["created", "paid", "failed"],
       default: "created",
     },
-    paymentProvider: String,
-    providerOrderId: String,
-    providerPaymentId: String,
+    paymentProvider: { type: String },
+    providerPaymentId: { type: String, default: null },
   },
   { timestamps: true }
 );
