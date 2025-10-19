@@ -4,14 +4,12 @@ export interface ICartItem {
   itemId: Types.ObjectId;
   itemType: "course" | "chapter";
   price: number;
+  addedAt: Date;
 }
 
 export interface ICart extends Document {
-  _id: Types.ObjectId;
   userId: Types.ObjectId;
   items: ICartItem[];
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 const CartItemSchema = new Schema<ICartItem>(
@@ -19,6 +17,7 @@ const CartItemSchema = new Schema<ICartItem>(
     itemId: { type: Schema.Types.ObjectId, required: true },
     itemType: { type: String, enum: ["course", "chapter"], required: true },
     price: { type: Number, required: true },
+    addedAt: { type: Date, default: Date.now },
   },
   { _id: false }
 );
@@ -32,4 +31,5 @@ const CartSchema = new Schema<ICart>(
 );
 
 const Cart = mongoose.models.Cart || mongoose.model<ICart>("Cart", CartSchema);
+
 export default Cart;

@@ -1,67 +1,152 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
+import Cart, { ICart, ICartItem } from "@/models/Cart";
+import Course, { ICourse } from "@/models/Course";
+import Chapter, { IChapter } from "@/models/Chapter";
 import { getUserFromApiRoute } from "@/lib/auth-guard";
-import Cart, { ICartItem } from "@/models/Cart";
-import User from "@/models/User";
+import { Types } from "mongoose";
 
-export async function POST(req: Request) {
+type AddItemBody = {
+  itemId: string;
+  itemType: "course" | "chapter";
+};
+
+export async function POST(req: NextRequest) {
   try {
     await connectDB();
-    const payload = await getUserFromApiRoute();
-    if (!payload)
+
+    const rawUser = (await getUserFromApiRoute()) as { id: string } | null;
+    if (!rawUser)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const user = await User.findById(payload.id);
-    if (!user)
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    const userId = new Types.ObjectId(rawUser.id);
 
-    const { itemId, itemType, price } = await req.json();
-    if (!itemId || !itemType || !price) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
-    }
+    const body = (await req.json()) as AddItemBody | null;
+    if (!body)
+      return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
-    // Prevent duplicates from purchased
-    if (
-      itemType === "course" &&
-      user.purchasedCourses?.some((id: any) => id.toString() === itemId)
-    ) {
+    const { itemId, itemType } = body;
+    if (!itemId || !itemType)
       return NextResponse.json(
-        { error: "Course already purchased" },
+        { error: "itemId and itemType required" },
         { status: 400 }
       );
-    }
-    if (
-      itemType === "chapter" &&
-      user.purchasedChapters?.some((id: any) => id.toString() === itemId)
-    ) {
+
+    if (itemType !== "course" && itemType !== "chapter")
       return NextResponse.json(
-        { error: "Chapter already purchased" },
+        { error: "itemType must be 'course' or 'chapter'" },
         { status: 400 }
       );
+
+    let price = 0;
+    let courseIdOfChapter: Types.ObjectId | null = null;
+
+    if (itemType === "course") {
+      const course = await Course.findById(itemId).lean<ICourse>().exec();
+      if (!course)
+        return NextResponse.json(
+          { error: "Course not found" },
+          { status: 404 }
+        );
+      price = course.price;
+    } else {
+      const chapter = await Chapter.findById(itemId).lean<IChapter>().exec();
+      if (!chapter)
+        return NextResponse.json(
+          { error: "Chapter not found" },
+          { status: 404 }
+        );
+
+      const parentCourse = await Course.findById(chapter.courseId)
+        .lean<ICourse>()
+        .exec();
+      if (!parentCourse)
+        return NextResponse.json(
+          { error: "Parent course not found" },
+          { status: 500 }
+        );
+
+      price = parentCourse.chapterPrice;
+      courseIdOfChapter = chapter.courseId as Types.ObjectId;
     }
 
-    let cart = await Cart.findOne({ userId: user._id });
+    // find or create cart
+    let cart = await Cart.findOne({ userId }).exec();
     if (!cart) {
-      cart = new Cart({ userId: user._id, items: [] });
+      cart = await Cart.create({ userId, items: [] });
     }
 
-    const exists = cart.items.some(
-      (i: ICartItem) =>
-        i.itemId.toString() === itemId && i.itemType === itemType
+    // business logic
+    if (itemType === "course") {
+      const newItems: ICartItem[] = [];
+      for (const it of cart.items as ICartItem[]) {
+        if (it.itemType === "chapter") {
+          const ch = await Chapter.findById(it.itemId).lean<IChapter>().exec();
+          if (
+            ch &&
+            ch.courseId &&
+            ch.courseId.toString() === itemId.toString()
+          ) {
+            continue;
+          }
+        }
+        newItems.push(it);
+      }
+      cart.items = newItems;
+    } else if (itemType === "chapter" && courseIdOfChapter) {
+      const courseInCart = (cart.items as ICartItem[]).find(
+        (it) =>
+          it.itemType === "course" &&
+          it.itemId.toString() === courseIdOfChapter.toString()
+      );
+      if (courseInCart) {
+        return NextResponse.json(
+          { error: "Course already in cart — cannot add chapter" },
+          { status: 409 }
+        );
+      }
+    }
+
+    // prevent duplicate item
+    const exists = (cart.items as ICartItem[]).some(
+      (it) =>
+        it.itemType === itemType && it.itemId.toString() === itemId.toString()
     );
-    if (exists) {
+    if (exists)
       return NextResponse.json(
         { error: "Item already in cart" },
-        { status: 400 }
+        { status: 409 }
       );
-    }
 
-    cart.items.push({ itemId, itemType, price });
+    // push new item
+    const newItem: ICartItem = {
+      itemId: new Types.ObjectId(itemId),
+      itemType,
+      price,
+      addedAt: new Date(),
+    };
+    cart.items.push(newItem as any);
+
     await cart.save();
 
-    return NextResponse.json({ success: true, cart });
+    const total = (cart.items as ICartItem[]).reduce(
+      (s: number, it: ICartItem) => s + (it.price ?? 0),
+      0
+    );
+
+    const responseItems = (cart.items as ICartItem[]).map((it: ICartItem) => ({
+      itemId: it.itemId.toString(),
+      itemType: it.itemType,
+      price: it.price,
+      addedAt: it.addedAt,
+    }));
+
+    return NextResponse.json({ success: true, items: responseItems, total });
   } catch (err: any) {
     console.error("POST /api/cart/add error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { error: err?.message ?? "Server error" },
+      { status: 500 }
+    );
   }
 }

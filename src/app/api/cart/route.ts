@@ -1,21 +1,40 @@
-import { NextResponse } from "next/server";
+// src/app/api/cart/route.ts
+import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import { getUserFromApiRoute } from "@/lib/auth-guard";
-import Cart from "@/models/Cart";
+import Cart, { ICart } from "@/models/Cart";
+import { Types } from "mongoose";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await connectDB();
-    const payload = await getUserFromApiRoute();
-    if (!payload)
+
+    // narrow auth helper return to { id: string } shape
+    const rawUser = (await getUserFromApiRoute()) as { id: string } | null;
+    if (!rawUser)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const cart = await Cart.findOne({ userId: payload.id });
-    if (!cart) return NextResponse.json({ cart: { items: [] } });
+    const userId = new Types.ObjectId(rawUser.id);
 
-    return NextResponse.json({ cart });
+    const cart = await Cart.findOne({ userId }).lean<ICart>().exec();
+    if (!cart) return NextResponse.json({ items: [], total: 0 });
+
+    const total = (cart.items ?? []).reduce((s, it) => s + (it.price ?? 0), 0);
+
+    // convert ObjectIds to strings for JSON
+    const items = cart.items.map((it) => ({
+      itemId: it.itemId.toString(),
+      itemType: it.itemType,
+      price: it.price,
+      addedAt: it.addedAt,
+    }));
+
+    return NextResponse.json({ items, total });
   } catch (err: any) {
     console.error("GET /api/cart error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { error: err?.message ?? "Server error" },
+      { status: 500 }
+    );
   }
 }

@@ -7,7 +7,12 @@ export interface ICourse extends Document {
   description: string;
   price: number;
   chapterPrice: number;
-  thumbnailUrl?: string;
+  thumbnailUrl: string;
+  fullCoursePdfPath: string; // GCS object path
+  pages: number;
+  author: string;
+  schoolGrade: "10" | "11" | "12";
+  subject: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,9 +22,14 @@ const CourseSchema = new Schema<ICourse>(
     title: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
     description: { type: String, required: true },
-    price: { type: Number, default: 0 },
-    chapterPrice: { type: Number, default: 0 },
-    thumbnailUrl: { type: String },
+    price: { type: Number, required: true },
+    chapterPrice: { type: Number, required: true },
+    thumbnailUrl: { type: String, required: true },
+    fullCoursePdfPath: { type: String, required: true },
+    pages: { type: Number, required: true },
+    author: { type: String, required: true },
+    schoolGrade: { type: String, enum: ["10", "11", "12"], required: true },
+    subject: { type: String, required: true },
   },
   { timestamps: true }
 );

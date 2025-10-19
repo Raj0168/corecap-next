@@ -1,4 +1,3 @@
-// src/lib/auth-guard.ts
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 import { verifyAccessToken } from "./jwt";
@@ -10,8 +9,7 @@ import type { TokenPayload } from "./jwt";
  */
 export async function getUserFromApiRoute(): Promise<TokenPayload | null> {
   try {
-    // cookies() from 'next/headers' is synchronous
-    const cookieStore = cookies();
+    const cookieStore = cookies(); // synchronous
     const token = (await cookieStore).get("accessToken")?.value;
     if (!token) return null;
     const payload = verifyAccessToken(token); // throws if invalid
@@ -37,7 +35,6 @@ export function getUserFromMiddleware(req: NextRequest): TokenPayload | null {
 
 /**
  * Require an admin user inside server routes (throws Error if not admin).
- * Throw an Error so your route can decide how to respond (status code / message).
  */
 export async function requireAdmin(): Promise<TokenPayload> {
   const user = await getUserFromApiRoute();
@@ -54,5 +51,5 @@ export async function requireAdmin(): Promise<TokenPayload> {
  */
 export async function getUserIdFromApiRoute(): Promise<string | null> {
   const u = await getUserFromApiRoute();
-  return u?.id ?? null;
+  return (u as any)?.id ?? null;
 }

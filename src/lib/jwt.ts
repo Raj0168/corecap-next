@@ -1,10 +1,17 @@
 import jwt from "jsonwebtoken";
 import { config } from "../config";
 
+/**
+ * TokenPayload used across the codebase.
+ * Keep it small and stable. We will store ids as strings for simplicity.
+ */
 export type TokenPayload = {
-  _id: unknown;
   id: string;
-  role: string;
+  role: "user" | "admin" | string;
+  name?: string;
+  email?: string;
+  purchasedCourses?: string[]; // optional arrays of string ids
+  purchasedChapters?: string[];
   jti?: string;
   type?: "access" | "refresh";
   iat?: number;

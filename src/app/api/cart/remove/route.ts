@@ -1,33 +1,71 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
+import Cart, { ICart, ICartItem } from "@/models/Cart";
 import { getUserFromApiRoute } from "@/lib/auth-guard";
-import Cart, { ICartItem } from "@/models/Cart";
+import { Types } from "mongoose";
 
-export async function POST(req: Request) {
+type RemoveBody = { itemId: string; itemType: "course" | "chapter" };
+
+export async function POST(req: NextRequest) {
   try {
     await connectDB();
-    const payload = await getUserFromApiRoute();
-    if (!payload)
+
+    const rawUser = (await getUserFromApiRoute()) as { id: string } | null;
+    if (!rawUser)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { itemId, itemType } = await req.json();
-    if (!itemId || !itemType) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
-    }
+    const userId = new Types.ObjectId(rawUser.id);
+    const body = (await req.json()) as RemoveBody | null;
 
-    const cart = await Cart.findOne({ userId: payload.id });
-    if (!cart)
+    if (!body)
+      return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+
+    const { itemId, itemType } = body;
+    if (!itemId || !itemType)
+      return NextResponse.json(
+        { error: "itemId and itemType required" },
+        { status: 400 }
+      );
+
+    const cartDoc = await Cart.findOne({ userId }).exec();
+    if (!cartDoc)
       return NextResponse.json({ error: "Cart not found" }, { status: 404 });
 
-    cart.items = cart.items.filter(
-      (i: ICartItem) =>
-        !(i.itemId.toString() === itemId && i.itemType === itemType)
+    const beforeLen = cartDoc.items.length;
+
+    cartDoc.items = (cartDoc.items as ICartItem[]).filter(
+      (it: ICartItem) =>
+        !(
+          it.itemType === itemType && it.itemId.toString() === itemId.toString()
+        )
     );
 
-    await cart.save();
-    return NextResponse.json({ success: true, cart });
+    if (cartDoc.items.length === beforeLen)
+      return NextResponse.json(
+        { error: "Item not found in cart" },
+        { status: 404 }
+      );
+
+    await cartDoc.save();
+
+    const total = (cartDoc.items as ICartItem[]).reduce(
+      (s: number, it: ICartItem) => s + (it.price ?? 0),
+      0
+    );
+
+    const items = (cartDoc.items as ICartItem[]).map((it: ICartItem) => ({
+      itemId: it.itemId.toString(),
+      itemType: it.itemType,
+      price: it.price,
+      addedAt: it.addedAt,
+    }));
+
+    return NextResponse.json({ success: true, items, total });
   } catch (err: any) {
     console.error("POST /api/cart/remove error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { error: err?.message ?? "Server error" },
+      { status: 500 }
+    );
   }
 }
