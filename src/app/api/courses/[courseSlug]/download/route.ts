@@ -3,15 +3,19 @@ import connectDB from "@/lib/db";
 import Course, { ICourse } from "@/models/Course";
 import User, { IUser } from "@/models/User";
 import { getUserFromApiRoute } from "@/lib/auth-guard";
-import { getSignedUrl } from "@/lib/gcp";
 import { addUserWatermark } from "@/lib/pdf-watermark";
+import { bucket } from "@/lib/gcsClient";
 
-/** Safe id compare helper */
+// ✅ helper: strip "gs://bucket-name/" prefix if present
+function normalizeGcsPath(path: string | undefined) {
+  if (!path) return "";
+  return path.replace(/^gs:\/\/[^/]+\//, "");
+}
+
 function idEquals(objId: unknown, idStr: string) {
   try {
     if (!objId) return false;
-    const s = (objId as any).toString();
-    return s === idStr;
+    return (objId as any).toString() === idStr;
   } catch {
     return false;
   }
@@ -19,66 +23,61 @@ function idEquals(objId: unknown, idStr: string) {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: { courseSlug: string } }
 ) {
   try {
     await connectDB();
 
-    // fetch course (lean)
-    const course = (await Course.findOne({ slug: params.slug })
+    const course = (await Course.findOne({ slug: params.courseSlug })
       .lean()
-      .exec()) as unknown as ICourse | null;
+      .exec()) as ICourse | null;
     if (!course)
       return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const tokenPayload = await getUserFromApiRoute();
-    if (!tokenPayload || !tokenPayload.id)
+    if (!tokenPayload?.id)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // fetch user from DB (lean)
     const user = (await User.findById(tokenPayload.id)
       .lean()
-      .exec()) as unknown as IUser | null;
+      .exec()) as IUser | null;
     if (!user)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const hasCourse =
+    const hasAccess =
       user.role === "admin" ||
       (Array.isArray(user.purchasedCourses) &&
         user.purchasedCourses.some((pc: any) =>
           idEquals(pc, course._id.toString())
         ));
 
-    if (!hasCourse)
+    if (!hasAccess)
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    // get signed url and fetch file
-    const signedUrl = await getSignedUrl(course.fullCoursePdfPath, 120);
-    const fetched = await fetch(signedUrl);
-    if (!fetched.ok) throw new Error("Failed to fetch course PDF from GCS");
+    // ✅ normalize path before accessing GCS
+    const normalizedPath = normalizeGcsPath(course.fullCoursePdfPath);
+    console.log("📘 Normalized GCS file path:", normalizedPath);
 
-    const arrayBuffer = await fetched.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const file = bucket.file(normalizedPath);
+    const [exists] = await file.exists();
 
-    // watermark
+    if (!exists) throw new Error("Course PDF not found in GCS");
+
+    const [buffer] = await file.download();
     const stamped = await addUserWatermark(
       buffer,
       user.name,
       user._id.toString()
     );
 
-    // stamped is Uint8Array from pdf-lib; cast to BodyInit for NextResponse
-    const body = stamped as unknown as BodyInit;
-
-    return new NextResponse(body, {
-      status: 200,
+    return new NextResponse(stamped as unknown as BodyInit, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${course.slug}-course.pdf"`,
       },
     });
   } catch (err: any) {
-    console.error("GET /api/courses/[slug]/download error:", err);
+    console.error("GET /api/courses/[courseSlug]/download error:", err);
     return NextResponse.json(
       { error: err?.message ?? "Server error" },
       { status: 500 }
