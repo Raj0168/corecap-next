@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
-import Course from "@/models/Course";
+import Course, { ICourse } from "@/models/Course";
+import User, { IUser } from "@/models/User";
 import { getUserFromApiRoute } from "@/lib/auth-guard";
 
 export async function GET(
@@ -9,11 +10,26 @@ export async function GET(
 ) {
   try {
     await connectDB();
-    const course = await Course.findOne({ slug: params.courseSlug }).lean();
+
+    const course = await Course.findOne({
+      slug: params.courseSlug,
+    }).lean<ICourse>();
     if (!course)
       return NextResponse.json({ error: "Course not found" }, { status: 404 });
 
-    return NextResponse.json(course);
+    // Get user from token
+    const tokenPayload = await getUserFromApiRoute();
+    const dbUser: IUser | null = tokenPayload
+      ? await User.findById(tokenPayload.id).lean<IUser>().exec()
+      : null;
+
+    // Check if user has access to the course
+    const userPurchasedCourses = new Set(
+      dbUser?.purchasedCourses?.map((id) => id.toString()) || []
+    );
+    const hasAccess = userPurchasedCourses.has(course._id.toString());
+
+    return NextResponse.json({ ...course, hasAccess });
   } catch (err: any) {
     console.error("GET /api/courses/[courseSlug] error:", err);
     return NextResponse.json(
@@ -29,18 +45,18 @@ export async function PATCH(
 ) {
   try {
     await connectDB();
+
     const user = await getUserFromApiRoute();
     if (!user?.role || user.role !== "admin")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const updates = await req.json();
+
     const updated = await Course.findOneAndUpdate(
       { slug: params.courseSlug },
       updates,
-      {
-        new: true,
-      }
-    ).lean();
+      { new: true }
+    ).lean<ICourse>();
 
     if (!updated)
       return NextResponse.json({ error: "Course not found" }, { status: 404 });
@@ -61,6 +77,7 @@ export async function DELETE(
 ) {
   try {
     await connectDB();
+
     const user = await getUserFromApiRoute();
     if (!user?.role || user.role !== "admin")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

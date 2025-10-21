@@ -1,8 +1,10 @@
+// courses/[courseSlug]/chapters/[chapterSlug]
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import Course, { ICourse } from "@/models/Course";
 import Chapter, { IChapter } from "@/models/Chapter";
 import { getUserFromApiRoute } from "@/lib/auth-guard";
+import User, { IUser } from "@/models/User";
 
 export async function GET(
   req: NextRequest,
@@ -21,9 +23,25 @@ export async function GET(
       courseId: course._id,
       slug: params.chapterSlug,
     }).lean<IChapter>();
-
     if (!chapter)
       return NextResponse.json({ error: "Chapter not found" }, { status: 404 });
+
+    // get user ID from token
+    const tokenPayload = await getUserFromApiRoute();
+    let dbUser = null;
+    if (tokenPayload?.id) {
+      dbUser = await User.findById(tokenPayload.id).lean<IUser>().exec();
+    }
+
+    const userPurchasedChapters = new Set(
+      dbUser?.purchasedChapters?.map((id) => id.toString()) || []
+    );
+    const userPurchasedCourses = new Set(
+      dbUser?.purchasedCourses?.map((id) => id.toString()) || []
+    );
+    const hasAccess =
+      userPurchasedCourses.has(course._id.toString()) ||
+      userPurchasedChapters.has(chapter._id.toString());
 
     return NextResponse.json({
       id: String(chapter._id),
@@ -31,11 +49,13 @@ export async function GET(
       slug: chapter.slug,
       order: chapter.order,
       excerpt: chapter.excerpt,
-      pdfPath: chapter.pdfPath,
-      previewPdfPath: chapter.previewPdfPath,
       pages: chapter.pages,
       createdAt: chapter.createdAt,
       updatedAt: chapter.updatedAt,
+      hasAccess,
+      pdfPath: hasAccess ? chapter.pdfPath : null,
+      previewPdfPath:
+        !hasAccess && chapter.previewPdfPath ? chapter.previewPdfPath : null,
     });
   } catch (err: any) {
     console.error("GET chapter error:", err);

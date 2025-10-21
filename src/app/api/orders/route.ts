@@ -1,22 +1,23 @@
 import { NextResponse, NextRequest } from "next/server";
 import connectDB from "@/lib/db";
-import Cart from "@/models/Cart";
+import Cart, { ICart } from "@/models/Cart";
 import Purchase from "@/models/Purchase";
 import User from "@/models/User";
 import Course from "@/models/Course";
 import Chapter from "@/models/Chapter";
 import { getUserFromApiRoute, requireAdmin } from "@/lib/auth-guard";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 
-/**
- * GET /api/orders
- *  - if admin and ?admin=true -> returns all purchases (admin)
- *  - otherwise returns current user's purchases (paginated)
- *
- * POST /api/orders  (checkout)
- *  - processes user's cart, marks purchase as paid, updates user's purchased* arrays and clears cart
- *  - Body (optional): { paymentProvider?: string, providerPaymentId?: string } - used when integrated with real gateway later
- */
+interface ICourse {
+  _id: Types.ObjectId;
+  price: number;
+  chapterPrice: number;
+}
+interface IChapter {
+  _id: Types.ObjectId;
+  courseId: Types.ObjectId;
+}
+
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
@@ -27,11 +28,8 @@ export async function GET(req: NextRequest) {
     if (!userToken)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // admin fetch all
     if (adminFlag) {
-      // require admin
-      const payload = await requireAdmin(); // will throw if not admin
-      // return all purchases
+      await requireAdmin();
       const purchases = (await Purchase.find()
         .sort({ createdAt: -1 })
         .lean()
@@ -41,7 +39,6 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // normal user: return their purchases
     const userId = (userToken as any).id;
     const purchases = (await Purchase.find({
       userId: new Types.ObjectId(userId),
@@ -69,17 +66,16 @@ export async function POST(req: NextRequest) {
     if (!userToken)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const userId = (userToken as any).id;
+    const userId = new Types.ObjectId((userToken as any).id);
 
-    // fetch cart
-    const cart = (await Cart.findOne({ userId }).lean().exec()) as unknown as
-      | any
-      | null;
+    const cart = (await Cart.findOne({ userId }).lean().exec()) as Pick<
+      ICart,
+      "items"
+    > | null;
     if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
     }
 
-    // compute final items and total, re-resolve prices from DB for safety
     const resolvedItems: any[] = [];
     let total = 0;
 
@@ -87,7 +83,7 @@ export async function POST(req: NextRequest) {
       if (it.itemType === "course") {
         const course = (await Course.findById(it.itemId)
           .lean()
-          .exec()) as unknown as any | null;
+          .exec()) as ICourse | null;
         if (!course)
           return NextResponse.json(
             { error: "Course not found in cart" },
@@ -103,16 +99,15 @@ export async function POST(req: NextRequest) {
       } else {
         const chapter = (await Chapter.findById(it.itemId)
           .lean()
-          .exec()) as unknown as any | null;
+          .exec()) as IChapter | null;
         if (!chapter)
           return NextResponse.json(
             { error: "Chapter not found in cart" },
             { status: 400 }
           );
-        // chapter price uses parent course.chapterPrice
         const course = (await Course.findById(chapter.courseId)
           .lean()
-          .exec()) as unknown as any | null;
+          .exec()) as ICourse | null;
         if (!course)
           return NextResponse.json(
             { error: "Parent course not found for chapter" },
@@ -128,65 +123,62 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // create purchase record (status: paid - mock)
-    const body = await req.json().catch(() => ({}));
-    const paymentProvider = body.paymentProvider ?? "mock";
-    const providerPaymentId = body.providerPaymentId ?? null;
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const body = await req.json().catch(() => ({}));
+      const paymentProvider = body.paymentProvider ?? "mock";
+      const providerPaymentId = body.providerPaymentId ?? null;
 
-    const purchase = await Purchase.create({
-      userId: new Types.ObjectId(userId),
-      items: resolvedItems,
-      amount: total,
-      status: "paid",
-      paymentProvider,
-      providerPaymentId,
-    });
+      const purchase = await Purchase.create(
+        [
+          {
+            userId,
+            items: resolvedItems,
+            amount: total,
+            status: "paid",
+            paymentProvider,
+            providerPaymentId,
+          },
+        ],
+        { session }
+      );
 
-    // update user's purchasedCourses and purchasedChapters using $addToSet
-    const addCourseIds = resolvedItems
-      .filter((i) => i.itemType === "course")
-      .map((i) => i.itemId);
-    const addChapterIds = resolvedItems
-      .filter((i) => i.itemType === "chapter")
-      .map((i) => i.itemId);
+      const courseIds = resolvedItems
+        .filter((r) => r.itemType === "course")
+        .map((r) => r.itemId);
+      const chapterIds = resolvedItems
+        .filter((r) => r.itemType === "chapter")
+        .map((r) => r.itemId);
 
-    // update user in DB
-    const userDoc = await User.findById(userId).exec();
-    if (userDoc) {
-      // add courses
-      if (addCourseIds.length > 0) {
-        for (const cid of addCourseIds) {
-          if (!userDoc.purchasedCourses) userDoc.purchasedCourses = [];
-          const exists = (userDoc.purchasedCourses ?? []).some(
-            (x: any) => x.toString() === cid.toString()
-          );
-          if (!exists) userDoc.purchasedCourses.push(cid);
-        }
-      }
-      // add chapters
-      if (addChapterIds.length > 0) {
-        for (const chid of addChapterIds) {
-          if (!userDoc.purchasedChapters) userDoc.purchasedChapters = [];
-          const exists = (userDoc.purchasedChapters ?? []).some(
-            (x: any) => x.toString() === chid.toString()
-          );
-          if (!exists) userDoc.purchasedChapters.push(chid);
-        }
-      }
-      await userDoc.save();
-    } else {
-      console.warn("Checkout: user not found when updating purchases", userId);
+      await User.updateOne(
+        { _id: userId },
+        {
+          $addToSet: {
+            purchasedCourses: { $each: courseIds },
+            purchasedChapters: { $each: chapterIds },
+          },
+        },
+        { session }
+      ).exec();
+
+      await Cart.deleteOne({ userId }, { session }).exec();
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return NextResponse.json({
+        id: purchase[0]._id.toString(),
+        status: purchase[0].status,
+        amount: purchase[0].amount,
+        items: purchase[0].items,
+      });
+    } catch (txErr) {
+      await session.abortTransaction();
+      session.endSession();
+      console.error("Checkout tx error:", txErr);
+      return NextResponse.json({ error: "Checkout failed" }, { status: 500 });
     }
-
-    // remove user's cart
-    await Cart.findOneAndDelete({ userId }).exec();
-
-    return NextResponse.json({
-      id: purchase._id.toString(),
-      status: purchase.status,
-      amount: purchase.amount,
-      items: purchase.items,
-    });
   } catch (err: any) {
     console.error("POST /api/orders (checkout) error:", err);
     return NextResponse.json(

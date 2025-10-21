@@ -1,6 +1,7 @@
+// src/app/api/cart/add/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
-import Cart, { ICart, ICartItem } from "@/models/Cart";
+import Cart, { ICartItem } from "@/models/Cart";
 import Course, { ICourse } from "@/models/Course";
 import Chapter, { IChapter } from "@/models/Chapter";
 import { getUserFromApiRoute } from "@/lib/auth-guard";
@@ -32,15 +33,52 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
 
+    if (!Types.ObjectId.isValid(itemId))
+      return NextResponse.json({ error: "Invalid itemId" }, { status: 400 });
+
     if (itemType !== "course" && itemType !== "chapter")
       return NextResponse.json(
         { error: "itemType must be 'course' or 'chapter'" },
         { status: 400 }
       );
 
-    let price = 0;
-    let courseIdOfChapter: Types.ObjectId | null = null;
+    // find or create cart
+    let cart = await Cart.findOne({ userId }).exec();
+    if (!cart) {
+      cart = await Cart.create({ userId, items: [] });
+    }
 
+    // check if item already exists
+    const exists = (cart.items as ICartItem[]).some(
+      (it) => it.itemType === itemType && it.itemId.toString() === itemId
+    );
+    if (exists)
+      return NextResponse.json(
+        { error: "Item already in cart" },
+        { status: 409 }
+      );
+
+    // enforce exclusive types
+    const hasCourse = (cart.items as ICartItem[]).some(
+      (it) => it.itemType === "course"
+    );
+    const hasChapter = (cart.items as ICartItem[]).some(
+      (it) => it.itemType === "chapter"
+    );
+
+    if (itemType === "course" && hasChapter)
+      return NextResponse.json(
+        { error: "Cannot add courses: cart already has chapters" },
+        { status: 409 }
+      );
+    if (itemType === "chapter" && hasCourse)
+      return NextResponse.json(
+        { error: "Cannot add chapters: cart already has courses" },
+        { status: 409 }
+      );
+
+    // get price
+    let price = 0;
     if (itemType === "course") {
       const course = await Course.findById(itemId).lean<ICourse>().exec();
       if (!course)
@@ -56,7 +94,6 @@ export async function POST(req: NextRequest) {
           { error: "Chapter not found" },
           { status: 404 }
         );
-
       const parentCourse = await Course.findById(chapter.courseId)
         .lean<ICourse>()
         .exec();
@@ -65,60 +102,10 @@ export async function POST(req: NextRequest) {
           { error: "Parent course not found" },
           { status: 500 }
         );
-
       price = parentCourse.chapterPrice;
-      courseIdOfChapter = chapter.courseId as Types.ObjectId;
     }
 
-    // find or create cart
-    let cart = await Cart.findOne({ userId }).exec();
-    if (!cart) {
-      cart = await Cart.create({ userId, items: [] });
-    }
-
-    // business logic
-    if (itemType === "course") {
-      const newItems: ICartItem[] = [];
-      for (const it of cart.items as ICartItem[]) {
-        if (it.itemType === "chapter") {
-          const ch = await Chapter.findById(it.itemId).lean<IChapter>().exec();
-          if (
-            ch &&
-            ch.courseId &&
-            ch.courseId.toString() === itemId.toString()
-          ) {
-            continue;
-          }
-        }
-        newItems.push(it);
-      }
-      cart.items = newItems;
-    } else if (itemType === "chapter" && courseIdOfChapter) {
-      const courseInCart = (cart.items as ICartItem[]).find(
-        (it) =>
-          it.itemType === "course" &&
-          it.itemId.toString() === courseIdOfChapter.toString()
-      );
-      if (courseInCart) {
-        return NextResponse.json(
-          { error: "Course already in cart — cannot add chapter" },
-          { status: 409 }
-        );
-      }
-    }
-
-    // prevent duplicate item
-    const exists = (cart.items as ICartItem[]).some(
-      (it) =>
-        it.itemType === itemType && it.itemId.toString() === itemId.toString()
-    );
-    if (exists)
-      return NextResponse.json(
-        { error: "Item already in cart" },
-        { status: 409 }
-      );
-
-    // push new item
+    // push item
     const newItem: ICartItem = {
       itemId: new Types.ObjectId(itemId),
       itemType,
@@ -130,10 +117,9 @@ export async function POST(req: NextRequest) {
     await cart.save();
 
     const total = (cart.items as ICartItem[]).reduce(
-      (s: number, it: ICartItem) => s + (it.price ?? 0),
+      (s, it) => s + (it.price ?? 0),
       0
     );
-
     const responseItems = (cart.items as ICartItem[]).map((it: ICartItem) => ({
       itemId: it.itemId.toString(),
       itemType: it.itemType,
@@ -141,7 +127,10 @@ export async function POST(req: NextRequest) {
       addedAt: it.addedAt,
     }));
 
-    return NextResponse.json({ success: true, items: responseItems, total });
+    return NextResponse.json(
+      { success: true, items: responseItems, total },
+      { status: 201 }
+    );
   } catch (err: any) {
     console.error("POST /api/cart/add error:", err);
     return NextResponse.json(

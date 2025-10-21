@@ -1,3 +1,4 @@
+// /api/payments/initiate/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import connectDB from "@/lib/db";
@@ -6,13 +7,12 @@ import User, { IUser } from "@/models/User";
 import Cart, { ICart } from "@/models/Cart";
 import Purchase from "@/models/Purchase";
 import Payment from "@/models/Payment";
-import { Types } from "mongoose";
 
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
 
-    const user = (await getUserFromApiRoute(req)) as {
+    const user = (await getUserFromApiRoute()) as {
       id: string;
       email: string;
       name: string;
@@ -35,20 +35,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
     }
 
-    // ✅ Explicit typing for reduce to remove implicit `any`
     const amount = cart.items.reduce((sum: number, it) => sum + it.price, 0);
 
     const PAYU_KEY = process.env.PAYU_KEY!;
     const PAYU_SALT = process.env.PAYU_SALT!;
     if (!PAYU_KEY || !PAYU_SALT) {
-      throw new Error("Missing PayU credentials in environment");
+      throw new Error("Missing PayU credentials");
     }
 
-    // ✅ Generate unique transaction ID
     const txnid = crypto.randomBytes(10).toString("hex");
     const productinfo = "CoreCap Purchase";
 
-    // ✅ Create Purchase record
     const purchase = await Purchase.create({
       userId: dbUser._id,
       items: cart.items.map((it) => ({
@@ -60,7 +57,6 @@ export async function POST(req: NextRequest) {
       status: "created",
     });
 
-    // ✅ Create Payment record
     await Payment.create({
       userId: dbUser._id,
       purchaseId: purchase._id,
@@ -69,11 +65,9 @@ export async function POST(req: NextRequest) {
       status: "pending",
     });
 
-    // ✅ Generate PayU Hash (SHA512)
     const hashString = `${PAYU_KEY}|${txnid}|${amount}|${productinfo}|${dbUser.name}|${dbUser.email}|||||||||||${PAYU_SALT}`;
     const hash = crypto.createHash("sha512").update(hashString).digest("hex");
 
-    // ✅ Response parameters for frontend (for form post to PayU)
     return NextResponse.json({
       success: true,
       payuParams: {
@@ -84,16 +78,13 @@ export async function POST(req: NextRequest) {
         firstname: dbUser.name,
         email: dbUser.email,
         phone: "9999999999",
-        surl: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
-        furl: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/failure`,
+        surl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/payments/verify`,
+        furl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/payments/verify`,
         hash,
       },
     });
   } catch (err: any) {
     console.error("INITIATE PAYMENT ERROR:", err);
-    return NextResponse.json(
-      { error: err.message || "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

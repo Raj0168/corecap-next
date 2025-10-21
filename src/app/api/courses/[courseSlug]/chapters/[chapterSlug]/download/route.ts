@@ -4,15 +4,14 @@ import Chapter, { IChapter } from "@/models/Chapter";
 import Course, { ICourse } from "@/models/Course";
 import User, { IUser } from "@/models/User";
 import { getUserFromApiRoute } from "@/lib/auth-guard";
-import { getSignedUrl } from "@/lib/gcp";
 import { addUserWatermark } from "@/lib/pdf-watermark";
+import { bucket } from "@/lib/gcsClient";
 
 /** Safe id compare helper */
 function idEquals(objId: unknown, idStr: string) {
   try {
     if (!objId) return false;
-    const s = (objId as any).toString();
-    return s === idStr;
+    return (objId as any).toString() === idStr;
   } catch {
     return false;
   }
@@ -20,33 +19,33 @@ function idEquals(objId: unknown, idStr: string) {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: { courseSlug: string; chapterSlug: string } }
 ) {
   try {
     await connectDB();
 
-    const chapter = (await Chapter.findOne({ slug: params.slug })
+    const course = (await Course.findOne({ slug: params.courseSlug })
       .lean()
-      .exec()) as unknown as IChapter | null;
-    if (!chapter)
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-    const course = (await Course.findById(chapter.courseId)
-      .lean()
-      .exec()) as unknown as ICourse | null;
+      .exec()) as ICourse | null;
     if (!course)
-      return NextResponse.json(
-        { error: "Parent course not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Course not found" }, { status: 404 });
+
+    const chapter = (await Chapter.findOne({
+      slug: params.chapterSlug,
+      courseId: course._id,
+    })
+      .lean()
+      .exec()) as IChapter | null;
+    if (!chapter)
+      return NextResponse.json({ error: "Chapter not found" }, { status: 404 });
 
     const tokenPayload = await getUserFromApiRoute();
-    if (!tokenPayload || !tokenPayload.id)
+    if (!tokenPayload?.id)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const user = (await User.findById(tokenPayload.id)
       .lean()
-      .exec()) as unknown as IUser | null;
+      .exec()) as IUser | null;
     if (!user)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -64,29 +63,28 @@ export async function GET(
     if (!hasAccess)
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    const signedUrl = await getSignedUrl(chapter.pdfPath, 120);
-    const fetched = await fetch(signedUrl);
-    if (!fetched.ok) throw new Error("Failed to fetch chapter PDF from GCS");
+    const file = bucket.file(chapter.pdfPath!);
+    const [exists] = await file.exists();
+    if (!exists) throw new Error("Chapter PDF not found in GCS");
 
-    const arrayBuffer = await fetched.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
+    const [buffer] = await file.download();
     const stamped = await addUserWatermark(
       buffer,
       user.name,
       user._id.toString()
     );
-    const body = stamped as unknown as BodyInit;
 
-    return new NextResponse(body, {
-      status: 200,
+    return new NextResponse(stamped as unknown as BodyInit, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${chapter.slug}-chapter.pdf"`,
       },
     });
   } catch (err: any) {
-    console.error("GET /api/chapters/[slug]/download error:", err);
+    console.error(
+      "GET /api/courses/[courseSlug]/chapters/[chapterSlug]/download error:",
+      err
+    );
     return NextResponse.json(
       { error: err?.message ?? "Server error" },
       { status: 500 }

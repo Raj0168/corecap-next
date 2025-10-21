@@ -5,7 +5,7 @@ function requireEnv(key: string): string {
 }
 
 export const config = {
-  appUrl: requireEnv("APP_URL"),
+  appUrl: requireEnv("NEXT_PUBLIC_APP_URL"),
   mongoUri: requireEnv("MONGODB_URI"),
   accessTokenSecret: requireEnv("ACCESS_TOKEN_SECRET"),
   refreshTokenSecret: requireEnv("REFRESH_TOKEN_SECRET"),

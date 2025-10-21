@@ -1,8 +1,7 @@
-// src/app/courses/[slug]/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 
@@ -16,6 +15,7 @@ interface Course {
   thumbnailUrl: string;
   author: string;
   pages: number;
+  hasAccess?: boolean;
 }
 
 interface Chapter {
@@ -25,9 +25,17 @@ interface Chapter {
   order: number;
   excerpt: string;
   pages: number;
-  pdfUrl: string | null;
-  previewPdfUrl?: string | null;
+  pdfPath: string | null;
+  previewPdfPath?: string | null;
   hasAccess?: boolean;
+  signedUrl?: string | null;
+}
+
+interface CartItem {
+  itemId: string;
+  itemType: "course" | "chapter";
+  price: number;
+  addedAt: string;
 }
 
 export default function CourseDetailPage() {
@@ -36,36 +44,71 @@ export default function CourseDetailPage() {
 
   const [course, setCourse] = useState<Course | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState<string | null>(null);
+
+  const router = useRouter();
 
   useEffect(() => {
     async function load() {
       try {
+        // --- Fetch course ---
         const resCourse = await fetch(`/api/courses/${slug}`);
         const c = await resCourse.json();
-        setCourse(c);
 
+        const mappedCourse: Course = {
+          id: c._id,
+          title: c.title,
+          slug: c.slug,
+          description: c.description,
+          price: c.price,
+          chapterPrice: c.chapterPrice,
+          thumbnailUrl: c.thumbnailUrl,
+          author: c.author,
+          pages: c.pages,
+          hasAccess: c.hasAccess,
+        };
+
+        setCourse(mappedCourse);
+
+        // --- Fetch chapters ---
         const resChapters = await fetch(`/api/courses/${slug}/chapters`);
         const ch = await resChapters.json();
         setChapters(ch.items || []);
+
+        // --- Fetch cart ---
+        const resCart = await fetch("/api/cart");
+        const cartData = await resCart.json();
+        setCart(cartData.items || []);
       } catch (e) {
-        console.error("Failed to load course detail", e);
+        console.error("Failed to load data", e);
       } finally {
         setLoading(false);
       }
     }
+
     load();
   }, [slug]);
 
+  // --- Add to cart ---
   async function addToCart(itemId: string, itemType: "course" | "chapter") {
     try {
       setAdding(itemId);
-      await fetch("/api/cart/add", {
+      const res = await fetch("/api/cart/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ itemId, itemType }),
       });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Failed to add to cart");
+        return;
+      }
+
+      setCart(data.items);
       alert("Added to cart!");
     } catch (err) {
       console.error(err);
@@ -75,12 +118,15 @@ export default function CourseDetailPage() {
     }
   }
 
+  const cartHasCourse = cart.some((it) => it.itemType === "course");
+  const cartHasChapter = cart.some((it) => it.itemType === "chapter");
+
   if (loading) return <div className="p-6">Loading course...</div>;
   if (!course) return <div className="p-6">Course not found</div>;
 
   return (
     <div className="p-6">
-      {/* Course Header */}
+      {/* --- Course Header --- */}
       <div className="flex gap-6">
         <img
           height={200}
@@ -95,25 +141,29 @@ export default function CourseDetailPage() {
           <p className="mt-2 font-semibold">By {course.author}</p>
           <p className="mt-2 text-lg font-bold">₹{course.price}</p>
           <div className="mt-4 flex gap-3">
-            <Button
-              disabled={adding === course.id}
-              onClick={() => addToCart(course.id, "course")}
-            >
-              Add Full Course to Cart
-            </Button>
-            {/* For now, keep this separate – ideally backend should also return signedUrl for full course */}
-            <Button
-              onClick={() =>
-                window.open(`/api/courses/${slug}/download`, "_blank")
-              }
-            >
-              Download Full Course
-            </Button>
+            {course.hasAccess ? (
+              <Button
+                onClick={() =>
+                  window.open(`/api/courses/${course.slug}/download`, "_blank")
+                }
+              >
+                Download Full Course
+              </Button>
+            ) : (
+              <Button
+                disabled={adding === course.id || cartHasChapter}
+                onClick={() => addToCart(course.id, "course")}
+              >
+                {cartHasChapter
+                  ? "Cannot buy course: cart has chapters"
+                  : "Buy Full Course"}
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Chapters */}
+      {/* --- Chapters --- */}
       <h2 className="mt-10 text-xl font-bold">Chapters</h2>
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         {chapters.map((ch) => (
@@ -125,33 +175,49 @@ export default function CourseDetailPage() {
               <p className="text-sm text-gray-600">{ch.excerpt}</p>
               <p className="text-sm mt-1">{ch.pages} pages</p>
 
-              <div className="mt-3 flex gap-2">
-                {ch.pdfUrl ? (
+              <div className="mt-3 flex flex-col gap-2">
+                {ch.hasAccess && ch.pdfPath ? (
                   <>
-                    <Button onClick={() => window.open(ch.pdfUrl!, "_blank")}>
+                    <Button
+                      onClick={() =>
+                        router.push(`/courses/${slug}/chapter/${ch.slug}`)
+                      }
+                    >
                       View
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => window.open(ch.pdfUrl!, "_blank")}
+                      onClick={() =>
+                        window.open(
+                          `/api/courses/${course.slug}/chapters/${ch.slug}/download`,
+                          "_blank"
+                        )
+                      }
                     >
-                      Download
+                      Download PDF
                     </Button>
                   </>
-                ) : ch.previewPdfUrl ? (
-                  <Button
-                    variant="outline"
-                    onClick={() => window.open(ch.previewPdfUrl!, "_blank")}
-                  >
-                    Preview
-                  </Button>
                 ) : (
-                  <Button
-                    disabled={adding === ch.id}
-                    onClick={() => addToCart(ch.id, "chapter")}
-                  >
-                    Buy Chapter ₹{course.chapterPrice}
-                  </Button>
+                  <>
+                    {ch.previewPdfPath && (
+                      <Button
+                        variant="outline"
+                        onClick={() =>
+                          router.push(`/courses/${slug}/chapter/${ch.slug}`)
+                        }
+                      >
+                        Preview
+                      </Button>
+                    )}
+                    <Button
+                      disabled={adding === ch.id || cartHasCourse}
+                      onClick={() => addToCart(ch.id, "chapter")}
+                    >
+                      {cartHasCourse
+                        ? "Cannot buy chapter: cart has courses"
+                        : `Buy Chapter ₹${course.chapterPrice}`}
+                    </Button>
+                  </>
                 )}
               </div>
             </CardContent>

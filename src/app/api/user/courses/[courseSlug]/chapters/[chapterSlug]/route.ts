@@ -1,4 +1,3 @@
-// src/app/api/user/courses/[courseSlug]/chapters/[chapterSlug]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import Course, { ICourse } from "@/models/Course";
@@ -45,7 +44,14 @@ export async function GET(
     order: chapter.order,
     excerpt: chapter.excerpt,
     pages: chapter.pages,
-    pdfUrl: hasAccess ? await getSignedUrl(chapter.pdfPath, 60) : null,
+    hasAccess, // <-- add this
+    pdfPath: hasAccess ? chapter.pdfPath : null, // normalized for frontend
+    previewPdfPath:
+      !hasAccess && chapter.previewPdfPath ? chapter.previewPdfPath : null, // normalized
+    pdfUrl:
+      hasAccess && chapter.pdfPath
+        ? await getSignedUrl(chapter.pdfPath, 60)
+        : null,
     previewPdfUrl:
       !hasAccess && chapter.previewPdfPath
         ? await getSignedUrl(chapter.previewPdfPath, 60)
