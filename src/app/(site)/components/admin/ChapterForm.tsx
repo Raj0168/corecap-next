@@ -11,6 +11,8 @@ type ChapterData = {
   pdfPath: string;
   previewPdfPath?: string | null;
   pages: number;
+  theoryPages?: number; // NEW
+  questions?: number; // NEW
 };
 
 // Props: create requires courseSlug, edit requires slug
@@ -42,12 +44,10 @@ export default function ChapterForm(props: Props) {
   const { mode, initial = {}, onSuccess } = props;
   const router = useRouter();
 
-  // Conditional extraction
   let courseSlug: string | undefined;
   let slug: string | undefined;
-  if (mode === "create") {
-    courseSlug = props.courseSlug;
-  } else {
+  if (mode === "create") courseSlug = props.courseSlug;
+  else {
     slug = props.slug;
     courseSlug = props.courseSlug;
   }
@@ -61,6 +61,11 @@ export default function ChapterForm(props: Props) {
     initial.previewPdfPath ?? ""
   );
   const [pages, setPages] = useState(initial.pages ?? 1);
+
+  // NEW FIELDS
+  const [theoryPages, setTheoryPages] = useState(initial.theoryPages ?? 0);
+  const [questions, setQuestions] = useState(initial.questions ?? 0);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,6 +95,8 @@ export default function ChapterForm(props: Props) {
           ? normalizeGcsPath(previewPdfPath)
           : null,
         pages: Number(pages),
+        theoryPages: Number(theoryPages), // NEW
+        questions: Number(questions), // NEW
       };
 
       let endpoint = "";
@@ -187,6 +194,28 @@ export default function ChapterForm(props: Props) {
             onChange={(e) => setPreviewPdfPath(e.target.value)}
             className="border p-2 rounded"
             placeholder="chapters/...-preview.pdf"
+          />
+        </label>
+      </div>
+
+      {/* NEW FIELDS */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <label className="flex flex-col">
+          <span className="font-medium">Theory Pages</span>
+          <input
+            type="number"
+            value={theoryPages}
+            onChange={(e) => setTheoryPages(Number(e.target.value))}
+            className="border p-2 rounded"
+          />
+        </label>
+        <label className="flex flex-col">
+          <span className="font-medium">Questions</span>
+          <input
+            type="number"
+            value={questions}
+            onChange={(e) => setQuestions(Number(e.target.value))}
+            className="border p-2 rounded"
           />
         </label>
       </div>

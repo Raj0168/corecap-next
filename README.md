@@ -71,14 +71,6 @@ An MVP (Minimum Viable Product) edtech platform built with the **T3 stack** (Nex
     GMAIL_USER=your_gmail_email
     GMAIL_PASS=your_gmail_app_password
 
-    # Google OAuth (optional)
-    GOOGLE_CLIENT_ID=your_google_client_id
-    GOOGLE_CLIENT_SECRET=your_google_client_secret
-
-    # Razorpay
-    RAZORPAY_KEY_ID=your_razorpay_key_id
-    RAZORPAY_KEY_SECRET=your_razorpay_key_secret
-
     # CDN for images (e.g., Supabase, Cloudflare R2)
     CDN_URL=your_cdn_base_url
     ```

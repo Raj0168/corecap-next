@@ -1,5 +1,3 @@
-"use client";
-
 import { useMutation, useQuery } from "@tanstack/react-query";
 import api from "@/utils/api";
 import { setCookie, removeCookie } from "@/utils/cookies";
@@ -13,7 +11,7 @@ function pickToken(payload: any) {
 }
 
 export const useLogin = () => {
-const setUser = useAuthStore((s) => s.setUser);
+  const setUser = useAuthStore((s) => s.setUser);
 
   return useMutation({
     mutationFn: (data: { email: string; password: string }) =>
@@ -28,6 +26,23 @@ const setUser = useAuthStore((s) => s.setUser);
     },
   });
 };
+
+export const useLogout = () => {
+  const logout = useAuthStore((s) => s.logout);
+
+  return useMutation({
+    mutationFn: () => api.post("/auth/logout").then((res) => res.data),
+    onSuccess: () => {
+      logout();
+    },
+  });
+};
+
+export const useMe = () =>
+  useQuery<User>({
+    queryKey: ["me"],
+    queryFn: () => api.get("/auth/me").then((res) => res.data.user),
+  });
 
 export const useRegister = () => {
   return useMutation({
@@ -56,21 +71,3 @@ export const useResetPassword = () => {
       api.post("/auth/reset-password", data).then((res) => res.data),
   });
 };
-
-export const useLogout = () => {
-  const logout = useAuthStore((s) => s.logout);
-  return useMutation({
-    mutationFn: () => api.post("/auth/logout").then((res) => res.data),
-    onSuccess: () => {
-      removeCookie("token");
-      logout();
-    },
-  });
-};
-
-export const useMe = () =>
-  useQuery<User>({
-    queryKey: ["me"],
-    queryFn: () => api.get("/auth/me").then((res) => res.data),
-    // You might want to set initialData from cookie-based SSR user if you provide it
-  });

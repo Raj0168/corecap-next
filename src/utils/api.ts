@@ -1,20 +1,34 @@
+// utils/api.ts
 import axios from "axios";
-import { getCookie } from "./cookies";
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+import { toastGlobal } from "../app/(site)/components/ui/toast";
 
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api",
   headers: { "Content-Type": "application/json" },
   withCredentials: true,
 });
 
-api.interceptors.request.use((config) => {
-  const token = getCookie("token");
-  if (token && config.headers) {
-    config.headers["Authorization"] = `Bearer ${token}`;
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+
+    if (status === 401) {
+      toastGlobal({ type: "error", message: "You need to login" });
+      if (typeof window !== "undefined") window.location.href = "/auth/login";
+    } else if (status === 404) {
+      if (typeof window !== "undefined") window.location.href = "/404";
+    } else if (status >= 500) {
+      if (typeof window !== "undefined") window.location.href = "/500";
+    } else {
+      toastGlobal({
+        type: "error",
+        message: error.response?.data?.error || error.message,
+      });
+    }
+
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 export default api;
