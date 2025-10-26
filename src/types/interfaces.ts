@@ -35,8 +35,9 @@ export interface Chapter {
   contentHtml: string;
 }
 
-export interface CartItem {
+export type CartItem = {
   itemId: string;
   itemType: "course" | "chapter";
   price: number;
-}
+  addedAt?: string;
+};

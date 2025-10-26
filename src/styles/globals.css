@@ -1,3 +1,48 @@
+@import "tailwindcss";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ----------  Theme colors  ---------- */
+@theme {
+  --color-primary: #0a2342;
+  --color-secondary: #ffd600;
+
+  --color-bg-light: #ffffff;
+  --color-text-light: #0a2342;
+
+  --color-bg-dark: #0a2342;
+  --color-text-dark: #ffffff;
+}
+
+/* ----------  Base styles  ---------- */
+html {
+  color-scheme: light dark;
+}
+
+body {
+  @apply transition-colors duration-300 min-h-screen;
+  background-color: var(--color-bg-light);
+  color: var(--color-text-light);
+}
+
+.dark body {
+  background-color: var(--color-bg-dark);
+  color: var(--color-text-dark);
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.3s ease-out;
+}

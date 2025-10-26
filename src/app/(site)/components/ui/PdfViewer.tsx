@@ -1,13 +1,17 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/utils/api";
 import type PDFJS from "pdfjs-dist/types/src/display/api";
+import { Button } from "@/app/(site)/components/ui/button";
 
 interface PdfViewerProps {
-  filename: string; // GCS object name
+  filename: string; // GCS object name or signed URL
   initialPage?: number;
   initialZoom?: number;
   className?: string;
+  canDownload?: boolean; // allow download button
 }
 
 export default function PdfViewer({
@@ -15,6 +19,7 @@ export default function PdfViewer({
   initialPage = 1,
   initialZoom = 1.25,
   className = "",
+  canDownload = false,
 }: PdfViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const pdfRef = useRef<PDFJS.PDFDocumentProxy | null>(null);
@@ -23,37 +28,40 @@ export default function PdfViewer({
   const [numPages, setNumPages] = useState<number>(0);
   const [page, setPage] = useState<number>(initialPage);
   const [zoom, setZoom] = useState<number>(initialZoom);
-  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const pdfApiUrl = `/api/pdf/${encodeURIComponent(filename)}`;
+  // --- Fetch PDF using react-query ---
+  const { data: pdfData, isLoading } = useQuery<ArrayBuffer, Error>({
+    queryKey: ["pdf", filename],
+    queryFn: async () => {
+      const res = await api.get<ArrayBuffer>(
+        `/pdf/${encodeURIComponent(filename)}`,
+        {
+          responseType: "arraybuffer",
+        }
+      );
+      return res.data;
+    },
+    staleTime: 15 * 60 * 1000, // cache 5 minutes
+    retry: 1,
+  });
 
-  // --- Load PDF from GCS API ---
   useEffect(() => {
+    if (!pdfData) return;
+
     let cancelled = false;
 
-    async function loadPdf() {
-      setLoading(true);
-      setError(null);
-
+    (async () => {
       try {
-        // dynamically import legacy pdfjs
         const pdfjsLib: typeof import("pdfjs-dist/legacy/build/pdf") =
           await import("pdfjs-dist/legacy/build/pdf");
 
-        // Set worker from public folder (must exist: public/pdfjs/pdf.worker.min.js)
         pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdfjs/pdf.worker.min.js";
 
-        const res = await fetch(pdfApiUrl, {
-          method: "GET",
-          credentials: "include",
-        });
+        // Make a copy of the ArrayBuffer to prevent "detached" errors
+        const pdfBuffer = pdfData.slice(0);
 
-        if (!res.ok) throw new Error(`Failed to fetch PDF (${res.status})`);
-
-        const data = await res.arrayBuffer();
-
-        const loadingTask = pdfjsLib.getDocument({ data });
+        const loadingTask = pdfjsLib.getDocument({ data: pdfBuffer });
         const pdfDoc = await loadingTask.promise;
 
         if (cancelled) {
@@ -67,23 +75,19 @@ export default function PdfViewer({
       } catch (err: any) {
         console.error("PDF load error:", err);
         if (!cancelled) setError(err.message ?? "Failed to load PDF");
-      } finally {
-        if (!cancelled) setLoading(false);
       }
-    }
-
-    loadPdf();
+    })();
 
     return () => {
       cancelled = true;
       if (pdfRef.current) {
         try {
           pdfRef.current.destroy();
-        } catch (e) {}
+        } catch {}
         pdfRef.current = null;
       }
     };
-  }, [filename]);
+  }, [pdfData]);
 
   // --- Render current page ---
   useEffect(() => {
@@ -96,7 +100,6 @@ export default function PdfViewer({
       return;
     }
 
-    // cancel previous render
     if (renderTaskRef.current) {
       try {
         renderTaskRef.current.cancel();
@@ -140,9 +143,9 @@ export default function PdfViewer({
         } catch {}
       }
     };
-  }, [page, zoom, numPages]);
+  }, [page, zoom, numPages, pdfData]);
 
-  // --- Navigation & Zoom ---
+  // --- Controls ---
   const goPrev = () => setPage((p) => Math.max(1, p - 1));
   const goNext = () =>
     setPage((p) => Math.min(numPages || p + 1, numPages || p));
@@ -156,14 +159,14 @@ export default function PdfViewer({
         <button
           className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
           onClick={goPrev}
-          disabled={loading || page <= 1}
+          disabled={isLoading || page <= 1}
         >
           ◀ Prev
         </button>
         <button
           className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
           onClick={goNext}
-          disabled={loading || page >= numPages}
+          disabled={isLoading || page >= numPages}
         >
           Next ▶
         </button>
@@ -174,7 +177,7 @@ export default function PdfViewer({
           <button
             className="px-2 py-1 bg-gray-200 rounded"
             onClick={zoomOut}
-            disabled={loading}
+            disabled={isLoading}
           >
             −
           </button>
@@ -182,7 +185,7 @@ export default function PdfViewer({
           <button
             className="px-2 py-1 bg-gray-200 rounded"
             onClick={zoomIn}
-            disabled={loading}
+            disabled={isLoading}
           >
             +
           </button>
@@ -190,7 +193,7 @@ export default function PdfViewer({
       </div>
 
       {/* Loading / Error */}
-      {loading && (
+      {isLoading && (
         <div className="p-6 text-center text-indigo-600">Loading PDF…</div>
       )}
       {error && <div className="text-red-600 p-2">Error: {error}</div>}
@@ -199,6 +202,22 @@ export default function PdfViewer({
       <div className="flex justify-center overflow-auto border rounded-md bg-white">
         <canvas ref={canvasRef} />
       </div>
+
+      {/* Optional Download */}
+      {canDownload && (
+        <div className="mt-3">
+          <Button
+            variant="outline"
+            onClick={() => {
+              const url = `/pdf/${encodeURIComponent(filename)}`;
+              window.open(url, "_blank");
+            }}
+            disabled={isLoading}
+          >
+            Download PDF
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

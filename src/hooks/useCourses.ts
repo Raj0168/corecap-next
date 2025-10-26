@@ -1,5 +1,3 @@
-"use client";
-
 import { useQuery, useMutation } from "@tanstack/react-query";
 import api from "@/utils/api";
 import { Course } from "@/types/interfaces";
@@ -7,13 +5,23 @@ import { Course } from "@/types/interfaces";
 export const useCourses = () =>
   useQuery<Course[]>({
     queryKey: ["courses"],
-    queryFn: () => api.get("/courses").then((res) => res.data),
+    queryFn: async () => {
+      const res = await api.get("/courses");
+      const data = res.data;
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data.items)) return data.items;
+      return [];
+    },
   });
 
 export const useCourse = (slug: string) =>
   useQuery<Course>({
     queryKey: ["course", slug],
-    queryFn: () => api.get(`/courses/${slug}`).then((res) => res.data),
+    queryFn: async () => {
+      const res = await api.get(`/courses/${slug}`);
+      const data = res.data;
+      return data?.item ?? data ?? {};
+    },
     enabled: !!slug,
   });
 

@@ -6,6 +6,7 @@ import Chapter, { IChapter } from "@/models/Chapter";
 import User, { IUser } from "@/models/User";
 import { getUserFromApiRoute } from "@/lib/auth-guard";
 
+// GET all chapters for a course
 export async function GET(
   _req: NextRequest,
   { params }: { params: { courseSlug: string } }
@@ -24,7 +25,6 @@ export async function GET(
       .lean<IChapter[]>()
       .exec();
 
-    // get user
     const tokenPayload = await getUserFromApiRoute();
     const dbUser: IUser | null = tokenPayload
       ? await User.findById(tokenPayload.id).lean<IUser>().exec()
@@ -47,6 +47,8 @@ export async function GET(
       pdfPath: ch.pdfPath,
       previewPdfPath: ch.previewPdfPath ?? null,
       pages: ch.pages,
+      theoryPages: ch.theoryPages ?? 0, // NEW
+      questions: ch.questions ?? 0, // NEW
       createdAt: ch.createdAt,
       updatedAt: ch.updatedAt,
       hasAccess:
@@ -63,6 +65,7 @@ export async function GET(
   }
 }
 
+// POST new chapter
 export async function POST(
   req: NextRequest,
   { params }: { params: { courseSlug: string } }
@@ -95,7 +98,6 @@ export async function POST(
     })
       .lean()
       .exec();
-
     if (existing)
       return NextResponse.json(
         { error: "Chapter slug already exists in this course" },
@@ -111,6 +113,8 @@ export async function POST(
       pdfPath: body.pdfPath,
       previewPdfPath: body.previewPdfPath ?? null,
       pages: body.pages,
+      theoryPages: body.theoryPages ?? 0, // NEW
+      questions: body.questions ?? 0, // NEW
     });
 
     return NextResponse.json({ id: String(created._id) }, { status: 201 });

@@ -1,12 +1,15 @@
+// app/auth/login/page.tsx
 import AuthCard from "../../components/auth/AuthCard";
 import LoginForm from "../../components/auth/LoginForm";
 
 export default function LoginPage() {
   return (
-    <AuthCard title="Login to Your Account">
-      <p className="text-sm text-gray-500 text-center mb-4">
-        Welcome back — access your courses, track progress, and continue
-        learning.
+    <AuthCard
+      title="Welcome Back :)"
+      imageUrl="/image-2.webp" 
+    >
+      <p className="text-gray-500 text-center mb-6">
+        To keep connected, please login with your personal info.
       </p>
       <LoginForm />
     </AuthCard>

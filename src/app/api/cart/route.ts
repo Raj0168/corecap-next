@@ -3,31 +3,50 @@ import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import { getUserFromApiRoute } from "@/lib/auth-guard";
 import Cart, { ICart } from "@/models/Cart";
+import Course, { ICourse } from "@/models/Course";
+import Chapter, { IChapter } from "@/models/Chapter";
 import { Types } from "mongoose";
 
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
-
-    // narrow auth helper return to { id: string } shape
     const rawUser = (await getUserFromApiRoute()) as { id: string } | null;
     if (!rawUser)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const userId = new Types.ObjectId(rawUser.id);
-
     const cart = await Cart.findOne({ userId }).lean<ICart>().exec();
     if (!cart) return NextResponse.json({ items: [], total: 0 });
 
     const total = (cart.items ?? []).reduce((s, it) => s + (it.price ?? 0), 0);
 
-    // convert ObjectIds to strings for JSON
-    const items = cart.items.map((it) => ({
-      itemId: it.itemId.toString(),
-      itemType: it.itemType,
-      price: it.price,
-      addedAt: it.addedAt,
-    }));
+    // fetch names in parallel
+    const items = await Promise.all(
+      cart.items.map(async (it) => {
+        let name = "";
+        if (it.itemType === "course") {
+          const c = await Course.findById(it.itemId)
+            .select("title")
+            .lean<ICourse>()
+            .exec();
+          name = c?.title ?? "Unknown Course";
+        } else {
+          const ch = await Chapter.findById(it.itemId)
+            .select("title")
+            .lean<IChapter>()
+            .exec();
+          name = ch?.title ?? "Unknown Chapter";
+        }
+
+        return {
+          itemId: it.itemId.toString(),
+          itemType: it.itemType,
+          name,
+          price: it.price,
+          addedAt: it.addedAt,
+        };
+      })
+    );
 
     return NextResponse.json({ items, total });
   } catch (err: any) {

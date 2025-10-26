@@ -6,6 +6,7 @@ import Chapter, { IChapter } from "@/models/Chapter";
 import { getUserFromApiRoute } from "@/lib/auth-guard";
 import User, { IUser } from "@/models/User";
 
+// GET single chapter
 export async function GET(
   req: NextRequest,
   { params }: { params: { courseSlug: string; chapterSlug: string } }
@@ -26,12 +27,10 @@ export async function GET(
     if (!chapter)
       return NextResponse.json({ error: "Chapter not found" }, { status: 404 });
 
-    // get user ID from token
     const tokenPayload = await getUserFromApiRoute();
-    let dbUser = null;
-    if (tokenPayload?.id) {
-      dbUser = await User.findById(tokenPayload.id).lean<IUser>().exec();
-    }
+    const dbUser = tokenPayload?.id
+      ? await User.findById(tokenPayload.id).lean<IUser>().exec()
+      : null;
 
     const userPurchasedChapters = new Set(
       dbUser?.purchasedChapters?.map((id) => id.toString()) || []
@@ -50,6 +49,8 @@ export async function GET(
       order: chapter.order,
       excerpt: chapter.excerpt,
       pages: chapter.pages,
+      theoryPages: chapter.theoryPages ?? 0, // NEW
+      questions: chapter.questions ?? 0, // NEW
       createdAt: chapter.createdAt,
       updatedAt: chapter.updatedAt,
       hasAccess,
@@ -66,6 +67,7 @@ export async function GET(
   }
 }
 
+// PUT update chapter
 export async function PUT(
   req: NextRequest,
   { params }: { params: { courseSlug: string; chapterSlug: string } }
@@ -95,6 +97,8 @@ export async function PUT(
           pdfPath: body.pdfPath,
           previewPdfPath: body.previewPdfPath ?? null,
           pages: body.pages,
+          theoryPages: body.theoryPages ?? 0, // NEW
+          questions: body.questions ?? 0, // NEW
         },
       },
       { new: true }
@@ -103,10 +107,7 @@ export async function PUT(
     if (!updated)
       return NextResponse.json({ error: "Chapter not found" }, { status: 404 });
 
-    return NextResponse.json({
-      id: String(updated._id),
-      ...updated,
-    });
+    return NextResponse.json({ id: String(updated._id), ...updated });
   } catch (err: any) {
     console.error("PUT chapter error:", err);
     return NextResponse.json(

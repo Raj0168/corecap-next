@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useParams, useRouter } from "next/navigation";
 import PdfViewer from "@/app/(site)/components/ui/PdfViewer";
 import { Button } from "@/app/(site)/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/utils/api";
 
 interface ChapterResp {
   id: string;
@@ -16,58 +18,42 @@ interface ChapterResp {
 }
 
 export default function ChapterViewerPage() {
-  const params = useParams();
+  const { slug, chapterSlug } = useParams() as {
+    slug: string;
+    chapterSlug: string;
+  };
   const router = useRouter();
-  const { slug, chapterSlug } = params as { slug: string; chapterSlug: string };
 
-  const [chapter, setChapter] = useState<ChapterResp | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: chapter,
+    isLoading,
+    isError,
+    error,
+  } = useQuery<ChapterResp, Error>({
+    queryKey: ["chapter", slug, chapterSlug],
+    queryFn: async () => {
+      const res = await api.get<ChapterResp>(
+        `/courses/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(
+          chapterSlug
+        )}`
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    const fetchChapter = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(
-          `/api/courses/${encodeURIComponent(
-            slug
-          )}/chapters/${encodeURIComponent(chapterSlug)}`,
-          { cache: "no-store", credentials: "include" }
-        );
-        if (!res.ok) {
-          const text = await res.text().catch(() => null);
-          throw new Error(
-            `Failed to load chapter (${res.status}) ${text ?? ""}`
-          );
-        }
-        const data = await res.json();
-        if (!cancelled) setChapter(data);
-      } catch (err: any) {
-        console.error("fetchChapter err:", err);
-        if (!cancelled) setError(err.message ?? "Failed to load chapter");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    fetchChapter();
-    return () => {
-      cancelled = true;
-    };
-  }, [slug, chapterSlug]);
-
-  if (loading) return <div className="p-6">Loading chapter…</div>;
-  if (error || !chapter)
+  if (isLoading) return <div className="p-6">Loading chapter…</div>;
+  if (isError || !chapter)
     return (
-      <div className="p-6 text-red-600">{error ?? "Chapter not found"}</div>
+      <div className="p-6 text-red-600">
+        {(error as any)?.message ?? "Chapter not found"}
+      </div>
     );
 
-  // Determine which PDF to show
   const fileObjName = chapter.hasAccess
-    ? chapter.pdfPath // full access
-    : chapter.previewPdfPath; // fallback to preview
-
+    ? chapter.pdfPath
+    : chapter.previewPdfPath;
   if (!fileObjName)
     return <div className="p-6">No PDF available for this chapter.</div>;
 
@@ -80,7 +66,6 @@ export default function ChapterViewerPage() {
       <PdfViewer filename={viewerFilename} className="min-h-[60vh]" />
 
       <div className="mt-4 flex gap-2">
-        {/* Only allow download if user has access */}
         {chapter.hasAccess && chapter.pdfPath && (
           <Button
             variant="outline"
