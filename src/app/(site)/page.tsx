@@ -39,11 +39,7 @@ export default function HomePage() {
             Smartly Revised.
           </h1>
           <p className="text-white text-lg mb-1">
-            Only what matters. Chapter-wise theory{" "}
-            <span className="italic text-sm line-through opacity-70">
-              mast-do
-            </span>{" "}
-            questions in compact PDFs.
+            Only what matters. Chapter-wise theory must do questions in compact PDFs.
           </p>
           <p className="text-white text-lg font-medium mb-6">
             Save time. Focus better. Score higher.
@@ -58,10 +54,9 @@ export default function HomePage() {
               Explore Courses
             </CommonButton>
 
-            {/* My Courses button only if logged in */}
             {isAuthenticated ? (
               <CommonButton
-                onClick={() => router.push("/courses/my-courses")}
+                onClick={() => router.push("/my-courses")}
                 color="secondary"
               >
                 My Courses

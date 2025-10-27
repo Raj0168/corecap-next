@@ -16,7 +16,7 @@ const HowItWorks = () => {
       icon: <Download className="w-12 h-12 text-white" />,
       title: "Download PDF",
       desc: "Get compact PDFs with only essential content.",
-      bgColor: "bg-[#FFD600]",
+      bgColor: "bg-[#1A2A49]",
       lineColor: "bg-gradient-to-r from-[#FFD600] to-[#1A2A49]",
     },
     {
@@ -46,7 +46,7 @@ const HowItWorks = () => {
               >
                 {step.icon}
                 <h3 className="text-white font-bold text-lg">{step.title}</h3>
-                <p className="text-white text-sm">{step.desc}</p>
+                <p className="text-white text-lg">{step.desc}</p>
               </div>
 
               {/* Connecting Line

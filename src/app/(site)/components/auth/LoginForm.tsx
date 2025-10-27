@@ -22,7 +22,7 @@ export default function LoginForm() {
     try {
       await mutation.mutateAsync({ email, password });
       toastGlobal({ type: "success", message: "Login successful!" });
-      router.push("/dashboard");
+      router.push("/my-courses");
     } catch (err: any) {
       const message =
         err?.response?.data?.error ?? err?.message ?? "Login failed";

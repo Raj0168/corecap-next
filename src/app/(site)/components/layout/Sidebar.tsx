@@ -112,13 +112,13 @@ export default function Sidebar() {
                 >
                   Courses
                 </Link>
-                <button
+                {/* <button
                   className="flex items-center gap-2 hover:text-yellow-500 transition"
                   onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                 >
                   {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
                   Theme
-                </button>
+                </button> */}
                 <Link
                   href="/auth/login"
                   className="block text-yellow-400 font-semibold hover:underline"
@@ -150,13 +150,13 @@ export default function Sidebar() {
                 >
                   <ShoppingCart size={18} /> Cart
                 </Link>
-                <button
+                {/* <button
                   className="flex items-center gap-2 hover:text-yellow-500 transition"
                   onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                 >
                   {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
                   Theme
-                </button>
+                </button> */}
                 <button
                   className="block text-red-600 font-semibold hover:underline mt-2"
                   onClick={handleLogout}
