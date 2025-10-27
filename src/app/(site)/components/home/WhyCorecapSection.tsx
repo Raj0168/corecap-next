@@ -33,7 +33,7 @@ const WhyCorecapSection = () => {
           {items.map((item, idx) => (
             <div key={idx} className="text-center">
               <div className="mb-2 flex justify-center">{item.icon}</div>
-              <p className="text-[#1A2A49] font-semibold text-sm md:text-base">
+              <p className="text-[#1A2A49] font-semibold text-lg md:text-base">
                 {item.text}
               </p>
             </div>

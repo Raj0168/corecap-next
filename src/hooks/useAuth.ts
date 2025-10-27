@@ -2,7 +2,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import api from "@/utils/api";
 import { setCookie, removeCookie } from "@/utils/cookies";
 import { useAuthStore } from "@/store/authStore";
-import { User } from "@/types/interfaces";
+import { User, UserPopulated } from "@/types/interfaces";
+import { queryClient } from "@/utils/react-query";
 
 function pickToken(payload: any) {
   return (
@@ -34,14 +35,23 @@ export const useLogout = () => {
     mutationFn: () => api.post("/auth/logout").then((res) => res.data),
     onSuccess: () => {
       logout();
+
+      queryClient.clear();
+
+      if (typeof window !== "undefined") {
+        window.location.href = "/auth/login";
+      }
     },
   });
 };
 
 export const useMe = () =>
-  useQuery<User>({
+  useQuery<UserPopulated, Error>({
     queryKey: ["me"],
     queryFn: () => api.get("/auth/me").then((res) => res.data.user),
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
   });
 
 export const useRegister = () => {

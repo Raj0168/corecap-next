@@ -1,8 +1,38 @@
+import { Types } from "mongoose";
+
 export interface User {
   id: string;
   name: string;
   email: string;
   role: "user" | "admin";
+}
+
+export interface CoursePopulated {
+  _id: Types.ObjectId | string;
+  title: string;
+  slug: string; 
+}
+
+export interface ChapterPopulated {
+  _id: Types.ObjectId | string;
+  title: string;
+  slug: string; 
+  courseId: CoursePopulated;
+}
+
+export interface UserPopulated {
+  _id: string;
+  name: string;
+  email: string;
+  role: "user" | "admin";
+  isEmailVerified: boolean;
+  provider: "credentials" | "google" | "github";
+  purchasedCourses?: CoursePopulated[];
+  purchasedChapters?: ChapterPopulated[];
+  progress?: any[];
+  bookmarks?: any[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Course {

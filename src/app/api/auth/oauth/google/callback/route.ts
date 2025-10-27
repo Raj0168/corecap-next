@@ -79,7 +79,7 @@ export async function GET(req: Request) {
       revoked: false,
     });
 
-    const res = NextResponse.redirect(`${config.appUrl}/dashboard`);
+    const res = NextResponse.redirect(`${config.appUrl}/my-courses`);
 
     res.cookies.set("accessToken", accessToken, {
       httpOnly: true,
