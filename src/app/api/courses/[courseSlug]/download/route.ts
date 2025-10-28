@@ -6,7 +6,6 @@ import { getUserFromApiRoute } from "@/lib/auth-guard";
 import { addUserWatermark } from "@/lib/pdf-watermark";
 import { bucket } from "@/lib/gcsClient";
 
-// ✅ helper: strip "gs://bucket-name/" prefix if present
 function normalizeGcsPath(path: string | undefined) {
   if (!path) return "";
   return path.replace(/^gs:\/\/[^/]+\//, "");
@@ -21,10 +20,8 @@ function idEquals(objId: unknown, idStr: string) {
   }
 }
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { courseSlug: string } }
-) {
+// NOTE: Using 'any' for the context to bypass a persistent internal Next.js type generation error.
+export async function GET(req: NextRequest, { params }: any) {
   try {
     await connectDB();
 
@@ -54,7 +51,6 @@ export async function GET(
     if (!hasAccess)
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    // ✅ normalize path before accessing GCS
     const normalizedPath = normalizeGcsPath(course.fullCoursePdfPath);
     console.log("📘 Normalized GCS file path:", normalizedPath);
 

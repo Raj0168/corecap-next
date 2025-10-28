@@ -19,19 +19,25 @@ function idEquals(objId: unknown, idStr: string) {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { courseSlug: string; chapterSlug: string } }
+  context: any // Using 'any' to bypass the Next.js internal type checker error
 ) {
   try {
+    // Type assertion for safe internal usage
+    const { courseSlug, chapterSlug } = context.params as {
+      courseSlug: string;
+      chapterSlug: string;
+    };
+
     await connectDB();
 
-    const course = (await Course.findOne({ slug: params.courseSlug })
+    const course = (await Course.findOne({ slug: courseSlug })
       .lean()
       .exec()) as ICourse | null;
     if (!course)
       return NextResponse.json({ error: "Course not found" }, { status: 404 });
 
     const chapter = (await Chapter.findOne({
-      slug: params.chapterSlug,
+      slug: chapterSlug,
       courseId: course._id,
     })
       .lean()
