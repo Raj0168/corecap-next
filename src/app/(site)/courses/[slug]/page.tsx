@@ -4,12 +4,7 @@ import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent } from "../../components/ui/card";
 import Button from "../../components/ui/button";
-import {
-  useCourse,
-  useChapters,
-  useCart,
-  useAddToCart,
-} from "@/hooks/useCourseDetail";
+import { useCourse, useChapters, useCart } from "@/hooks/useCourseDetail";
 import { useToast } from "../../components/ui/toast";
 import {
   Eye,
@@ -20,6 +15,7 @@ import {
   ListCheck,
 } from "lucide-react";
 import DownloadModal from "../../components/ui/DownloadModal";
+import { useAddToCart } from "@/hooks/useCart";
 
 function CourseSkeleton() {
   return (
@@ -66,8 +62,10 @@ export default function CourseDetailPage() {
     isError: courseError,
   } = useCourse(slug);
   const { data: chapters, isLoading: chaptersLoading } = useChapters(slug);
-  const { data: cartItems = [], refetch: refetchCart } = useCart(false);
   const addToCartMutation = useAddToCart();
+
+  const { data: rawCartItems, refetch: refetchCart } = useCart(false);
+  const cartItems = Array.isArray(rawCartItems) ? rawCartItems : [];
 
   const cartHasCourse = cartItems.some((it) => it.itemType === "course");
   const cartHasChapter = cartItems.some((it) => it.itemType === "chapter");
@@ -77,16 +75,10 @@ export default function CourseDetailPage() {
       setAddingId(itemId);
       await addToCartMutation.mutateAsync({ itemId, itemType });
       toast({ type: "success", message: "Added to cart!" });
-      await refetchCart();
     } catch (err: any) {
-      if (
-        err?.response?.status === 409 ||
-        err?.data?.error === "Item already in cart"
-      ) {
+      if (err?.response?.status === 409)
         toast({ type: "warning", message: "Item already in cart" });
-      } else {
-        toast({ type: "error", message: "Failed to add to cart" });
-      }
+      else toast({ type: "error", message: "Failed to add to cart" });
     } finally {
       setAddingId(null);
     }

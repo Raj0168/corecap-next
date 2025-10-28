@@ -21,7 +21,7 @@ export default function Providers({ children, initialUser }: ProvidersProps) {
   }, [initialUser, setUser]);
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </ThemeProvider>
   );

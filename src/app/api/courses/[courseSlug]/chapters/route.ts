@@ -5,21 +5,14 @@ import Chapter, { IChapter } from "@/models/Chapter";
 import User, { IUser } from "@/models/User";
 import { getUserFromApiRoute } from "@/lib/auth-guard";
 
-// Define the expected structure for internal type assertion
-interface CourseContext {
-  params: {
-    courseSlug: string;
-  };
-}
-
 // GET all chapters for a course
 export async function GET(
   _req: NextRequest,
-  context: any // Using 'any' to bypass Next.js internal type checker conflict
-) {
+  context: any
+): Promise<NextResponse> {
   try {
-    // Type assertion for safe internal usage
-    const { courseSlug } = (context as CourseContext).params;
+    // ✅ Must await params in Next.js 15+
+    const { courseSlug } = await context.params;
 
     await connectDB();
 
@@ -77,13 +70,14 @@ export async function GET(
 // POST new chapter
 export async function POST(
   req: NextRequest,
-  context: any // Using 'any' to bypass Next.js internal type checker conflict
-) {
+  context: any
+): Promise<NextResponse> {
   try {
-    // Type assertion for safe internal usage
-    const { courseSlug } = (context as CourseContext).params;
+    // ✅ Must await params in Next.js 15+
+    const { courseSlug } = await context.params;
 
     await connectDB();
+
     const user = await getUserFromApiRoute();
     if (user?.role !== "admin")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

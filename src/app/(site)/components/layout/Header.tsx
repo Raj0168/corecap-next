@@ -12,7 +12,6 @@ export default function Header() {
   const user = useAuthStore((s) => s.user); // reactive user
   const loggedIn = !!user;
 
-  // Random avatar for logged-in user
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {

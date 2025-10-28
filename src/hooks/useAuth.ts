@@ -1,3 +1,5 @@
+"use client";
+
 import { useMutation, useQuery } from "@tanstack/react-query";
 import api from "@/utils/api";
 import { setCookie, removeCookie } from "@/utils/cookies";
@@ -17,13 +19,25 @@ export const useLogin = () => {
   return useMutation({
     mutationFn: (data: { email: string; password: string }) =>
       api.post("/auth/login", data).then((res) => res.data),
-    onSuccess: (payload: any) => {
+    onSuccess: async (payload: any) => {
       const token = pickToken(payload);
       const user: User | undefined =
         payload?.user ?? payload?.data?.user ?? undefined;
 
       if (token) setCookie("token", token);
-      if (user) setUser(user);
+
+      if (user) {
+        setUser(user);
+        queryClient.setQueryData(["me"], user);
+      } else {
+        try {
+          const { data } = await api.get("/auth/me");
+          setUser(data.user);
+          queryClient.setQueryData(["me"], data.user);
+        } catch (err) {
+          console.warn("Failed to fetch /auth/me after login:", err);
+        }
+      }
     },
   });
 };
@@ -35,9 +49,8 @@ export const useLogout = () => {
     mutationFn: () => api.post("/auth/logout").then((res) => res.data),
     onSuccess: () => {
       logout();
-
+      removeCookie("token");
       queryClient.clear();
-
       if (typeof window !== "undefined") {
         window.location.href = "/auth/login";
       }
@@ -48,36 +61,38 @@ export const useLogout = () => {
 export const useMe = () =>
   useQuery<UserPopulated, Error>({
     queryKey: ["me"],
-    queryFn: () => api.get("/auth/me").then((res) => res.data.user),
+    queryFn: async () => {
+      const res = await api.get("/auth/me");
+      const user = res.data.user;
+      const setUser = useAuthStore.getState().setUser;
+      setUser(user);
+      return user;
+    },
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
   });
 
-export const useRegister = () => {
-  return useMutation({
+export const useRegister = () =>
+  useMutation({
     mutationFn: (data: { name: string; email: string; password: string }) =>
       api.post("/auth/register", data).then((res) => res.data),
   });
-};
 
-export const useVerifyEmail = () => {
-  return useMutation({
+export const useVerifyEmail = () =>
+  useMutation({
     mutationFn: (data: { email: string; code: string }) =>
       api.post("/auth/verify-email", data).then((res) => res.data),
   });
-};
 
-export const useForgotPassword = () => {
-  return useMutation({
+export const useForgotPassword = () =>
+  useMutation({
     mutationFn: (data: { email: string }) =>
       api.post("/auth/forgot-password", data).then((res) => res.data),
   });
-};
 
-export const useResetPassword = () => {
-  return useMutation({
+export const useResetPassword = () =>
+  useMutation({
     mutationFn: (data: { email: string; code: string; newPassword: string }) =>
       api.post("/auth/reset-password", data).then((res) => res.data),
   });
-};

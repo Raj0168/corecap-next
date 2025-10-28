@@ -1,11 +1,9 @@
 "use client";
 
 import React from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Button } from "../components/ui/button";
 import { useToast } from "../components/ui/toast";
-import api from "@/utils/api";
 import {
   ShoppingCart,
   Trash2,
@@ -14,28 +12,9 @@ import {
   Package,
   ArrowRight,
 } from "lucide-react";
+import { useCart, useRemoveFromCart, useClearCart } from "@/hooks/useCart";
 
-// Types
-type CartItem = {
-  itemId: string;
-  itemType: "course" | "chapter";
-  name: string;
-  price: number;
-  addedAt: string;
-};
-
-type CartResponse = {
-  items: CartItem[];
-  total: number;
-};
-
-// Fetch cart
-async function fetchCart(): Promise<CartResponse> {
-  const res = await api.get("/cart");
-  return res.data;
-}
-
-// Skeleton loader
+// 🧩 Skeleton loader for cart items
 function CartSkeleton() {
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-4 animate-pulse">
@@ -62,43 +41,19 @@ function CartSkeleton() {
 
 export default function CartPage() {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["cart"],
-    queryFn: fetchCart,
-    refetchOnWindowFocus: false,
-    retry: 1,
-  });
+  // ✅ Fetch cart data
+  const { data, isLoading, isError, refetch } = useCart();
 
-  // Mutations
-  const removeMutation = useMutation({
-    mutationFn: (item: CartItem) =>
-      api
-        .post("/cart/remove", { itemId: item.itemId, itemType: item.itemType })
-        .then((res) => res.data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
-      toast({ type: "success", message: "Item removed!" });
-    },
-    onError: (err: any) => {
-      toast({ type: "error", message: err?.response?.data?.error || "Failed" });
-    },
-  });
+  // ✅ Mutations
+  const removeMutation = useRemoveFromCart();
+  const clearMutation = useClearCart();
 
-  const clearMutation = useMutation({
-    mutationFn: () => api.post("/cart/clear").then((res) => res.data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
-      toast({ type: "success", message: "Cart cleared!" });
-    },
-  });
-
-  // Handle loading state
+  // 🕓 Loading
   if (isLoading) return <CartSkeleton />;
 
-  // Handle error state
+  // ❌ Error state
   if (isError || !data)
     return (
       <div className="p-6 text-center text-red-600">
@@ -109,17 +64,19 @@ export default function CartPage() {
       </div>
     );
 
-  // Safe destructuring with fallbacks
-  const items: CartItem[] = data?.items || [];
-  const total: number = data?.total || 0;
+  // ✅ Destructure safely
+  const { items = [], total = 0 } = data;
 
+  // ✅ Render cart
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center gap-2">
         <ShoppingCart className="w-6 h-6 text-primary" />
         <h1 className="text-2xl font-bold">Your Cart</h1>
       </div>
 
+      {/* Empty state */}
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center text-gray-600 mt-10">
           <Package className="w-12 h-12 mb-3 text-gray-400" />
@@ -127,6 +84,7 @@ export default function CartPage() {
         </div>
       ) : (
         <>
+          {/* Cart items */}
           <div className="rounded-2xl shadow-sm divide-y divide-gray-100 bg-white border border-gray-100">
             {items.map((item) => (
               <div
@@ -138,10 +96,13 @@ export default function CartPage() {
                   <div className="text-gray-500 text-sm capitalize">
                     {item.itemType}
                   </div>
-                  <div className="text-xs text-gray-400">
-                    Added: {new Date(item.addedAt).toLocaleString()}
-                  </div>
+                  {item.addedAt && (
+                    <div className="text-xs text-gray-400">
+                      Added: {new Date(item.addedAt).toLocaleString()}
+                    </div>
+                  )}
                 </div>
+
                 <div className="flex items-center gap-3">
                   <div className="font-semibold text-lg text-gray-900">
                     ₹{item.price}
@@ -149,8 +110,25 @@ export default function CartPage() {
                   <Button
                     variant="ghost"
                     className="text-gray-500 hover:text-red-600"
-                    onClick={() => removeMutation.mutate(item)}
                     disabled={removeMutation.isPending}
+                    onClick={() =>
+                      removeMutation.mutate(
+                        { itemId: item.itemId, itemType: item.itemType },
+                        {
+                          onSuccess: () => {
+                            toast({
+                              type: "success",
+                              message: "Item removed!",
+                            });
+                          },
+                          onError: () =>
+                            toast({
+                              type: "error",
+                              message: "Failed to remove item.",
+                            }),
+                        }
+                      )
+                    }
                   >
                     {removeMutation.isPending ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -163,12 +141,18 @@ export default function CartPage() {
             ))}
           </div>
 
+          {/* Footer / Total */}
           <div className="flex justify-between items-center mt-6 bg-gray-50 p-4 rounded-xl">
             <div className="text-xl font-semibold">Total: ₹{total}</div>
             <div className="flex gap-3">
               <Button
                 variant="outline"
-                onClick={() => clearMutation.mutate()}
+                onClick={() =>
+                  clearMutation.mutate(undefined, {
+                    onSuccess: () =>
+                      toast({ type: "success", message: "Cart cleared!" }),
+                  })
+                }
                 disabled={clearMutation.isPending}
                 className="flex items-center gap-1"
               >
@@ -179,6 +163,7 @@ export default function CartPage() {
                 )}
                 Clear
               </Button>
+
               <Button
                 onClick={() => router.push("/checkout")}
                 className="flex items-center gap-1"
