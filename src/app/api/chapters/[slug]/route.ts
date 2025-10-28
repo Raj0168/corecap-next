@@ -14,7 +14,7 @@ export async function GET(
   context: any // Using 'any' to bypass Next.js internal type checker conflict
 ) {
   // We destructure to ensure we still use the correct structure internally
-  const { slug } = context.params as { slug: string };
+  const { slug } = await context.params as { slug: string };
   await connectDB();
   const ch = await Chapter.findOne({ slug }).lean<IChapter>().exec();
   if (!ch) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -25,7 +25,7 @@ export async function PUT(
   req: NextRequest,
   context: any // Using 'any' to bypass Next.js internal type checker conflict
 ) {
-  const { slug } = context.params as { slug: string };
+  const { slug } = await context.params as { slug: string };
   await connectDB();
   const user = await getUserFromApiRoute();
   if (!user || user.role !== "admin") {
@@ -44,7 +44,7 @@ export async function DELETE(
   req: NextRequest,
   context: any // Using 'any' to bypass Next.js internal type checker conflict
 ) {
-  const { slug } = context.params as { slug: string };
+  const { slug } = await context.params as { slug: string };
   await connectDB();
   const user = await getUserFromApiRoute();
   if (!user || user.role !== "admin") {

@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 // NOTE: Using 'any' for the context to bypass a persistent internal Next.js type generation error.
 // We are also avoiding object destructuring in the function signature to further attempt to bypass the internal type check bug.
 export async function GET(req: NextRequest, context: any) {
-  const { filename } = context.params;
+  const { filename } = await context.params;
 
   if (!filename) {
     return NextResponse.json(
