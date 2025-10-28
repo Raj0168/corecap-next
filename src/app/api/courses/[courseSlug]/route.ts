@@ -3,94 +3,81 @@ import connectDB from "@/lib/db";
 import Course, { ICourse } from "@/models/Course";
 import User, { IUser } from "@/models/User";
 import { getUserFromApiRoute } from "@/lib/auth-guard";
+import { addUserWatermark } from "@/lib/pdf-watermark";
+import { bucket } from "@/lib/gcsClient";
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: { courseSlug: string } }
-) {
+function normalizeGcsPath(path: string | undefined) {
+  if (!path) return "";
+  return path.replace(/^gs:\/\/[^/]+\//, "");
+}
+
+function idEquals(objId: unknown, idStr: string) {
+  try {
+    if (!objId) return false;
+    return (objId as any).toString() === idStr;
+  } catch {
+    return false;
+  }
+}
+
+// NOTE: Using 'any' for the context to bypass a persistent internal Next.js type generation error.
+// We are also avoiding object destructuring in the function signature to further attempt to bypass the internal type check bug.
+export async function GET(req: NextRequest, context: any) {
   try {
     await connectDB();
 
-    const course = await Course.findOne({
-      slug: params.courseSlug,
-    }).lean<ICourse>();
+    // Access params via context.params
+    const course = (await Course.findOne({ slug: context.params.courseSlug })
+      .lean()
+      .exec()) as ICourse | null;
     if (!course)
-      return NextResponse.json({ error: "Course not found" }, { status: 404 });
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    // Get user from token
     const tokenPayload = await getUserFromApiRoute();
-    const dbUser: IUser | null = tokenPayload
-      ? await User.findById(tokenPayload.id).lean<IUser>().exec()
-      : null;
-
-    // Check if user has access to the course
-    const userPurchasedCourses = new Set(
-      dbUser?.purchasedCourses?.map((id) => id.toString()) || []
-    );
-    const hasAccess = userPurchasedCourses.has(course._id.toString());
-
-    return NextResponse.json({ ...course, hasAccess });
-  } catch (err: any) {
-    console.error("GET /api/courses/[courseSlug] error:", err);
-    return NextResponse.json(
-      { error: err.message ?? "Server error" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { courseSlug: string } }
-) {
-  try {
-    await connectDB();
-
-    const user = await getUserFromApiRoute();
-    if (!user?.role || user.role !== "admin")
+    if (!tokenPayload?.id)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const updates = await req.json();
-
-    const updated = await Course.findOneAndUpdate(
-      { slug: params.courseSlug },
-      updates,
-      { new: true }
-    ).lean<ICourse>();
-
-    if (!updated)
-      return NextResponse.json({ error: "Course not found" }, { status: 404 });
-
-    return NextResponse.json(updated);
-  } catch (err: any) {
-    console.error("PATCH /api/courses/[courseSlug] error:", err);
-    return NextResponse.json(
-      { error: err.message ?? "Server error" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: { courseSlug: string } }
-) {
-  try {
-    await connectDB();
-
-    const user = await getUserFromApiRoute();
-    if (!user?.role || user.role !== "admin")
+    const user = (await User.findById(tokenPayload.id)
+      .lean()
+      .exec()) as IUser | null;
+    if (!user)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const deleted = await Course.findOneAndDelete({ slug: params.courseSlug });
-    if (!deleted)
-      return NextResponse.json({ error: "Course not found" }, { status: 404 });
+    const hasAccess =
+      user.role === "admin" ||
+      (Array.isArray(user.purchasedCourses) &&
+        user.purchasedCourses.some((pc: any) =>
+          idEquals(pc, course._id.toString())
+        ));
 
-    return NextResponse.json({ success: true });
+    if (!hasAccess)
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    const normalizedPath = normalizeGcsPath(course.fullCoursePdfPath);
+    console.log("📘 Normalized GCS file path:", normalizedPath);
+
+    const file = bucket.file(normalizedPath);
+    const [exists] = await file.exists();
+
+    if (!exists) throw new Error("Course PDF not found in GCS");
+
+    const [buffer] = await file.download();
+    const stamped = await addUserWatermark(
+      buffer,
+      user.name,
+      user._id.toString()
+    );
+
+    return new NextResponse(stamped as unknown as BodyInit, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${course.slug}-course.pdf"`,
+      },
+    });
   } catch (err: any) {
-    console.error("DELETE /api/courses/[courseSlug] error:", err);
+    console.error("GET /api/courses/[courseSlug]/download error:", err);
     return NextResponse.json(
-      { error: err.message ?? "Server error" },
+      { error: err?.message ?? "Server error" },
       { status: 500 }
     );
   }

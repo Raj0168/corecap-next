@@ -1,15 +1,13 @@
-// pdf/[filename]
 import { NextRequest, NextResponse } from "next/server";
 import { bucket } from "@/lib/gcsClient";
 
 // disable edge — we need Node.js streams
 export const runtime = "nodejs";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { filename: string } }
-) {
-  const { filename } = params;
+// NOTE: Using 'any' for the context to bypass a persistent internal Next.js type generation error.
+// We are also avoiding object destructuring in the function signature to further attempt to bypass the internal type check bug.
+export async function GET(req: NextRequest, context: any) {
+  const { filename } = context.params;
 
   if (!filename) {
     return NextResponse.json(
