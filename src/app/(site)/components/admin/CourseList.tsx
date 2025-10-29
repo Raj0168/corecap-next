@@ -48,6 +48,7 @@ export default function CourseList({ courses }: { courses: CourseItem[] }) {
       {courses.map((c) => (
         <div key={c.id} className="p-4 bg-white rounded shadow flex gap-4">
           <img
+            loading="lazy"
             src={c.thumbnailUrl}
             alt={c.title}
             className="w-28 h-20 object-cover rounded"

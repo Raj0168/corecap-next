@@ -9,7 +9,6 @@ import {
   ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 
 const Footer = () => {
   const links = [
@@ -21,20 +20,20 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="bg-[#0A2342] text-white border-t-4 border-yellow-400 py-8 px-4">
+    <footer className="bg-[#0a2342] text-white border-t-4 border-yellow-400 py-8 px-4">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:justify-between sm:items-center gap-6 flex-wrap">
         {/* Logo + Brand */}
         <div className="flex items-center gap-2">
-          <Image
+          <img
+            loading="lazy"
             src="/logo-l.webp"
             alt="Logo"
             width={50}
             height={50}
             className="object-contain"
-            priority
           />
-          <span className="text-yellow-400 text-xl font-semibold">
-            CorecapMaths
+          <span className="hidden md:inline text-xl font-semibold tracking-wide text-yellow-400">
+            Co<span className="text-yellow-200">Recap</span>Maths
           </span>
         </div>
 

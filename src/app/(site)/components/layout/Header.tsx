@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import Sidebar from "./Sidebar";
@@ -24,8 +23,8 @@ export default function Header() {
   }, [loggedIn]);
 
   return (
-    <header className="sticky top-0 z-50 bg-[#0a2342] text-white border-b border-[#1b355d]">
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-3 md:py-4">
+    <header className="sticky top-0 z-50 bg-[#0a2342] text-white border-b border-[#999]">
+      <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-2 md:py-3">
         {/* Sidebar for mobile */}
         <div className="md:hidden flex items-center">
           <Sidebar />
@@ -36,16 +35,16 @@ export default function Header() {
           href="/"
           className="flex-1 flex items-center justify-center md:justify-start gap-2"
         >
-          <Image
+          <img
+            loading="lazy"
             src="/logo-l.webp"
             alt="Logo"
             width={50}
             height={50}
             className="object-contain"
-            priority
           />
           <span className="hidden md:inline text-xl font-semibold tracking-wide text-yellow-400">
-            CoreCapMaths
+            Co<span className="text-yellow-200">Recap</span>Maths
           </span>
         </Link>
 

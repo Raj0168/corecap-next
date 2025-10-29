@@ -2,9 +2,16 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useTheme } from "next-themes";
-import { Menu, X, Sun, Moon, ShoppingCart } from "lucide-react";
+import {
+  Menu,
+  X,
+  Sun,
+  Moon,
+  ShoppingCart,
+  BadgeIndianRupee,
+  LogOut,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useLogout } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/authStore";
@@ -82,16 +89,16 @@ export default function Sidebar() {
         <div className="flex flex-col">
           {/* Logo + Brand */}
           <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-4 shadow-sm">
-            <Image
+            <img
+              loading="lazy"
               src="/logo-l.webp"
               alt="Logo"
               width={40}
               height={40}
               className="object-contain"
-              priority
             />
-            <span className="text-xl font-bold text-yellow-500">
-              CorecapMaths
+            <span className="text-xl font-semibold tracking-wide text-yellow-400">
+              Co<span className="text-yellow-200">Recap</span>Maths
             </span>
             <button
               className="ml-auto p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
@@ -150,19 +157,27 @@ export default function Sidebar() {
                 >
                   <ShoppingCart size={18} /> Cart
                 </Link>
+                <Link
+                  href="/purchases"
+                  className="flex items-center gap-2 hover:text-yellow-500 transition"
+                  onClick={() => setOpen(false)}
+                >
+                  <BadgeIndianRupee size={18} /> Purchases
+                </Link>
                 {/* <button
                   className="flex items-center gap-2 hover:text-yellow-500 transition"
                   onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                >
+                  >
                   {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
                   Theme
-                </button> */}
+                  </button> */}
                 <button
-                  className="block text-red-600 font-semibold hover:underline mt-2"
+                  className="flex items-center gap-2 text-red-600 font-semibold hover:underline mt-2 disabled:opacity-60"
                   onClick={handleLogout}
                   disabled={processing}
                 >
-                  {processing ? "Logging out..." : "Logout"}
+                  <LogOut size={18} />
+                  <span>{processing ? "Logging out..." : "Logout"}</span>
                 </button>
               </>
             )}

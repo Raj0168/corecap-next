@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import React from "react";
 
 export default function GoogleButton({
@@ -28,13 +27,13 @@ export default function GoogleButton({
       }`}
       style={{ width: size, height: size }}
     >
-      <Image
+      <img
+        loading="lazy"
         src="/google.svg"
         alt="Google logo"
         width={size * 0.6}
         height={size * 0.6}
         className="object-contain"
-        priority
       />
     </button>
   );
