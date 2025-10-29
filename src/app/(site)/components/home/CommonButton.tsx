@@ -14,7 +14,7 @@ const CommonButton: React.FC<CommonButtonProps> = ({
   onClick,
 }) => {
   const base =
-    "px-4 py-2 font-semibold rounded-lg text-base transition-colors duration-200";
+    "px-4 py-2 font-semibold rounded-lg text-base transition-colors duration-200 cursor-pointer";
   const styles =
     color === "primary"
       ? "bg-yellow-400 text-[#1A2A49] hover:bg-yellow-300"

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Image from "next/image";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { User, Sun, Moon } from "lucide-react";
@@ -67,7 +66,8 @@ export default function UserMenu({
         }
       >
         {loggedIn ? (
-          <Image
+          <img
+            loading="lazy"
             src={avatarUrl ?? "/avatars/avatar1.webp"}
             alt="User avatar"
             width={36}

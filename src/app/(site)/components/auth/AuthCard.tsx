@@ -17,6 +17,7 @@ export default function AuthCard({
       {imageUrl && (
         <div className="hidden md:flex w-7/12">
           <img
+            loading="lazy"
             src={imageUrl}
             alt="Auth Illustration"
             className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"

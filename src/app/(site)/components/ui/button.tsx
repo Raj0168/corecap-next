@@ -38,11 +38,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variants: Record<NonNullable<ButtonProps["variant"]>, string> = {
       default:
-        "bg-[#FFD600] text-[#0A2342] hover:bg-[#FFEA70] focus:ring-[#FFD600]",
+        "bg-[#FFD600] text-[#0a2342] hover:bg-[#FFEA70] focus:ring-[#FFD600]",
       outline:
-        "border border-[#E5E7EB] bg-white text-[#0A2342] hover:bg-[#F8F9FA] focus:ring-[#0A2342]",
+        "border border-[#E5E7EB] bg-white text-[#0a2342] hover:bg-[#F8F9FA] focus:ring-[#0a2342]",
       ghost:
-        "bg-transparent text-[#0A2342] hover:bg-[#00000008] focus:ring-[#0A2342]",
+        "bg-transparent text-[#0a2342] hover:bg-[#00000008] focus:ring-[#0a2342]",
     };
 
     const classes = cn(base, variants[variant], className);

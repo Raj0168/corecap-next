@@ -11,7 +11,7 @@ const WhyCorecapSection = () => {
     },
     {
       icon: <FileText className="text-yellow-400 w-10 h-10" />,
-      text: "Must-do questions from past year papers",
+      text: "Must-do questions with solution, reasoning & approach",
     },
     {
       icon: <Lightbulb className="text-yellow-400 w-10 h-10" />,
@@ -27,7 +27,7 @@ const WhyCorecapSection = () => {
     <section className="bg-white py-12">
       <div className="max-w-6xl mx-auto text-center px-4">
         <h2 className="text-3xl md:text-4xl font-bold text-[#1A2A49] mb-10">
-          Why Corecap?
+          Why CoRecapMaths?
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 justify-items-center">
           {items.map((item, idx) => (
