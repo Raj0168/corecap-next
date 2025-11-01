@@ -10,6 +10,10 @@ export interface ICartItem {
 export interface ICart extends Document {
   userId: Types.ObjectId;
   items: ICartItem[];
+  coupon?: {
+    code: string | null;
+    discount: number;
+  };
 }
 
 const CartItemSchema = new Schema<ICartItem>(
@@ -26,6 +30,10 @@ const CartSchema = new Schema<ICart>(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     items: [CartItemSchema],
+    coupon: {
+      code: { type: String, default: null },
+      discount: { type: Number, default: 0 },
+    },
   },
   { timestamps: true }
 );

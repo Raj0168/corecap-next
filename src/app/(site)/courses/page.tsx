@@ -69,16 +69,16 @@ export default function CoursesPage() {
           key={index}
           className="shadow-lg rounded-2xl hover:shadow-xl transition-shadow"
         >
-          <div className="relative w-full h-40">
-            <Image
-              src={"/course.jpg"}
+          <div className="relative w-full h-40 overflow-hidden rounded-t-2xl">
+            <img
+              src="/course-image.webp"
               alt={course.title || "Course image"}
-              fill
-              className="object-cover rounded-t-2xl"
+              className="w-full h-full object-cover"
               sizes="(max-width: 768px) 100vw, 33vw"
-              priority
+              loading="lazy"
             />
           </div>
+
           <CardContent className="p-4">
             <h2 className="text-lg font-semibold line-clamp-1">
               {course.title}

@@ -13,8 +13,8 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { useCart, useRemoveFromCart, useClearCart } from "@/hooks/useCart";
+import ApplyCouponBox from "../components/cart/ApplyCouponBox";
 
-// 🧩 Skeleton loader for cart items
 function CartSkeleton() {
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-4 animate-pulse">
@@ -43,17 +43,16 @@ export default function CartPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  // ✅ Fetch cart data
-  const { data, isLoading, isError, refetch } = useCart();
+  // your cart hook (already exists)
+  const { data, isPending, isError, refetch } = useCart();
 
-  // ✅ Mutations
+  // mutations (already exist)
   const removeMutation = useRemoveFromCart();
   const clearMutation = useClearCart();
 
-  // 🕓 Loading
-  if (isLoading) return <CartSkeleton />;
+  // Loading and error handling (unchanged)
+  if (isPending) return <CartSkeleton />;
 
-  // ❌ Error state
   if (isError || !data)
     return (
       <div className="p-6 text-center text-red-600">
@@ -64,10 +63,15 @@ export default function CartPage() {
       </div>
     );
 
-  // ✅ Destructure safely
-  const { items = [], total = 0 } = data;
+  // Data from your GET /api/cart — matches your implementation
+  const {
+    items = [],
+    total = 0,
+    discount = 0,
+    payable = total,
+    coupon = null,
+  } = data;
 
-  // ✅ Render cart
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-6">
       {/* Header */}
@@ -86,7 +90,7 @@ export default function CartPage() {
         <>
           {/* Cart items */}
           <div className="rounded-2xl shadow-sm divide-y divide-gray-100 bg-white border border-gray-100">
-            {items.map((item) => (
+            {items.map((item: any) => (
               <div
                 key={item.itemId}
                 className="flex justify-between items-center p-4 hover:bg-gray-50 transition"
@@ -141,9 +145,23 @@ export default function CartPage() {
             ))}
           </div>
 
+          {/* Coupon Box */}
+          <div className="mt-4">
+            <ApplyCouponBox appliedCoupon={coupon} />
+          </div>
+
           {/* Footer / Total */}
           <div className="flex justify-between items-center mt-6 bg-gray-50 p-4 rounded-xl">
-            <div className="text-xl font-semibold">Total: ₹{total}</div>
+            <div className="text-right">
+              <div className="text-sm text-gray-600">Subtotal: ₹{total}</div>
+              {discount > 0 && (
+                <div className="text-sm text-green-600">
+                  Discount: -₹{discount}
+                </div>
+              )}
+              <div className="text-xl font-semibold">Total: ₹{payable}</div>
+            </div>
+
             <div className="flex gap-3">
               <Button
                 variant="outline"

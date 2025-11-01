@@ -103,7 +103,7 @@ export default function CourseDetailPage() {
             <div className="w-full md:w-1/2 h-64 md:h-80 lg:h-96 relative rounded-xl overflow-hidden bg-gray-100">
               <img
                 loading="lazy"
-                src={course.thumbnailUrl ?? "/course-default.jpg"}
+                src="/course-image.webp"
                 alt={course.title}
                 className="w-full h-full object-cover"
               />
