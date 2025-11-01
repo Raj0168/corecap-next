@@ -109,50 +109,108 @@ export default function CourseDetailPage() {
               />
             </div>
 
-            <div className="flex-1">
-              <h1 className="text-3xl md:text-4xl font-bold">{course.title}</h1>
-              <p className="text-gray-600 mt-3 md:mt-4">{course.description}</p>
-              <p className="mt-2 text-gray-800 font-semibold">
-                By {course.author}
-              </p>
-              <p className="mt-3 text-2xl md:text-3xl font-bold text-indigo-600">
-                ₹{course.price}
+            <section className="mt-4 md:mt-6 text-gray-700">
+              <h2 className="text-xl md:text-2xl font-semibold text-gray-900">
+                Course Description
+              </h2>
+
+              {/* Intro */}
+              <p className="mt-3 text-sm md:text-base leading-7">
+                CoreCap Maths offers a focused, time-efficient way to master
+                Class 10 CBSE Mathematics — designed for students who value
+                clarity, structure, and precision over endless material.
               </p>
 
-              {/* Buttons */}
-              <div className="mt-5 flex flex-col sm:flex-row gap-3">
-                {course.hasAccess ? (
-                  <Button
-                    className="w-full sm:w-auto"
-                    onClick={() =>
-                      handleDownload(
-                        `/api/courses/${course.slug}/download`,
-                        `${course.slug}-course.pdf`
-                      )
-                    }
-                  >
-                    <Download className="mr-2 h-4 w-4" /> Download Full Course
-                  </Button>
-                ) : (
-                  <Button
-                    className="w-full sm:w-auto"
-                    disabled={addingId === course._id || cartHasChapter}
-                    onClick={() =>
-                      addToCart(
-                        course._id ?? (course as any).id ?? course.slug,
-                        "course"
-                      )
-                    }
-                  >
-                    {addingId === course._id
-                      ? "Adding..."
-                      : cartHasChapter
-                      ? "Cannot buy course: cart has chapters"
-                      : "Buy Full Course"}
-                  </Button>
-                )}
+              <div className="mt-4 md:mt-6">
+                <h3 className="text-sm md:text-base font-medium text-gray-900">
+                  You’ll get:
+                </h3>
+
+                <ul className="mt-2 space-y-2">
+                  <li className="flex items-start">
+                    <span className="mr-3 mt-1 text-indigo-600 font-bold">
+                      —
+                    </span>
+                    <span className="text-sm md:text-base leading-6">
+                      <strong>Concise Concept Notes:</strong> Compact summaries
+                      for all 14 chapters.
+                    </span>
+                  </li>
+
+                  <li className="flex items-start">
+                    <span className="mr-3 mt-1 text-indigo-600 font-bold">
+                      —
+                    </span>
+                    <span className="text-sm md:text-base leading-6">
+                      <strong>Types of Questions:</strong> High-value,
+                      exam-focused questions with approach guidance.
+                    </span>
+                  </li>
+
+                  <li className="flex items-start">
+                    <span className="mr-3 mt-1 text-indigo-600 font-bold">
+                      —
+                    </span>
+                    <span className="text-sm md:text-base leading-6">
+                      <strong>Strategic Coverage:</strong> Know what to study,
+                      revise & skip.
+                    </span>
+                  </li>
+                </ul>
               </div>
-            </div>
+
+              {/* Break here — visible always */}
+              <p className="mt-4 text-sm md:text-base leading-7 font-semibold">
+                Whether you're revising before exams or brushing up before tests
+                — this course gives you smart, structured and stress-free
+                preparation.
+              </p>
+
+              {/* Expandable section */}
+              <details className="mt-3 cursor-pointer text-sm md:text-base leading-7">
+                <summary className="text-indigo-600 underline hover:text-indigo-700 font-medium">
+                  Show full details
+                </summary>
+
+                <div className="mt-3 space-y-4">
+                  <p>Smart Revision. Focused Effort. Confident Results.</p>
+
+                  <div>
+                    <h3 className="text-sm md:text-base font-medium text-gray-900">
+                      Who This Course Is For
+                    </h3>
+                    <ul className="mt-2 space-y-2">
+                      <li className="flex items-start">
+                        <span className="mr-3 mt-1 text-indigo-600 font-bold">
+                          —
+                        </span>
+                        <span>
+                          Class 10 CBSE students preparing for the 2026 boards.
+                        </span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="mr-3 mt-1 text-indigo-600 font-bold">
+                          —
+                        </span>
+                        <span>
+                          Learners who want efficient revision, not bulky
+                          textbooks.
+                        </span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="mr-3 mt-1 text-indigo-600 font-bold">
+                          —
+                        </span>
+                        <span>
+                          Students who want to understand concepts, not memorize
+                          steps.
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </details>
+            </section>
           </>
         )}
       </div>
