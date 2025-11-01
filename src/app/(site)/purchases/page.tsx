@@ -27,7 +27,7 @@ function formatDate(dateString: string) {
 
 function PurchaseSkeleton() {
   return (
-    <div className="animate-pulse border rounded-xl p-4 space-y-3 shadow-sm">
+    <div className="animate-pulse rounded-xl p-4 space-y-3 shadow-sm">
       <div className="h-5 bg-gray-200 rounded w-1/3" />
       <div className="h-4 bg-gray-200 rounded w-1/4" />
       <div className="h-4 bg-gray-200 rounded w-1/5" />

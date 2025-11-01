@@ -1,55 +1,63 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "../components/ui/button";
-
-type CartItem = {
-  itemId: string;
-  itemType: "course" | "chapter";
-  price: number;
-  addedAt: string;
-};
-
-type PayuParams = {
-  key: string;
-  txnid: string;
-  amount: string | number;
-  productinfo: string;
-  firstname: string;
-  email: string;
-  phone?: string;
-  surl: string;
-  furl: string;
-  hash: string;
-};
+import { Loader2, CreditCard, ShieldCheck, Receipt } from "lucide-react";
+import { useCart, useInitiatePayment } from "@/hooks/useCart";
 
 export default function CheckoutPage() {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-  // Load cart for order summary
-  useEffect(() => {
-    loadCart();
-  }, []);
+  // react-query hooks from your codebase
+  const { data, isPending, isError, refetch } = useCart();
+  const paymentMutation = useInitiatePayment();
 
-  async function loadCart() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/cart");
-      if (!res.ok) throw new Error("Failed to load cart");
-      const data = await res.json();
-      setItems(data.items || []);
-      setTotal(data.total || 0);
-    } catch (err: any) {
-      setError(err?.message ?? "Failed to load cart");
-    } finally {
-      setLoading(false);
-    }
+  // simple loading UI (no external Skeleton component)
+  if (isPending) {
+    return (
+      <div className="max-w-3xl mx-auto p-6 space-y-6">
+        <div className="h-8 w-40 bg-gray-200 rounded-lg" />
+        {[1, 2].map((i) => (
+          <div
+            key={i}
+            className="flex justify-between items-center p-4 bg-gray-50 rounded-xl shadow-sm"
+          >
+            <div className="space-y-2 w-3/4">
+              <div className="h-4 w-32 bg-gray-200 rounded" />
+              <div className="h-3 w-24 bg-gray-100 rounded" />
+            </div>
+            <div className="h-6 w-16 bg-gray-200 rounded" />
+          </div>
+        ))}
+        <div className="p-4 bg-gray-50 rounded-xl space-y-3">
+          <div className="h-4 w-28 bg-gray-200 rounded" />
+          <div className="h-4 w-32 bg-gray-200 rounded" />
+          <div className="h-5 w-40 bg-gray-200 rounded" />
+        </div>
+        <div className="h-11 w-full bg-gray-200 rounded-xl" />
+      </div>
+    );
   }
+
+  if (isError || !data) {
+    return (
+      <div className="p-6 text-center text-red-600">
+        Failed to load checkout.
+        <div className="mt-4">
+          <Button onClick={() => refetch()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const {
+    items = [],
+    total = 0,
+    discount = 0,
+    payable = total,
+    coupon = null,
+  } = data;
 
   function postToPayU(actionUrl: string, params: Record<string, any>) {
     const form = document.createElement("form");
@@ -70,111 +78,112 @@ export default function CheckoutPage() {
     setTimeout(() => form.remove(), 5000);
   }
 
-  async function handleCheckoutRedirect() {
-    setProcessing(true);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/payments/initiate", { method: "POST" });
-      const data = await res.json();
-
-      if (!res.ok || !data.payuParams)
-        throw new Error(data?.error || "Failed to initiate payment");
-
-      const payu: PayuParams = data.payuParams;
-
-      const mode = (
-        process.env.NEXT_PUBLIC_PAYU_MODE || "sandbox"
-      ).toLowerCase();
-      const payuAction =
-        mode === "prod"
-          ? "https://secure.payu.in/_payment"
-          : "https://sandboxsecure.payu.in/_payment";
-
-      const formParams: Record<string, any> = {
-        key: payu.key,
-        txnid: payu.txnid,
-        amount: payu.amount,
-        productinfo: payu.productinfo,
-        firstname: payu.firstname,
-        email: payu.email,
-        phone: payu.phone ?? "",
-        surl: payu.surl,
-        furl: payu.furl,
-        hash: payu.hash,
-      };
-
-      postToPayU(payuAction, formParams);
-
-      setTimeout(() => {
-        setProcessing(false);
-        if (!document.hidden && document.visibilityState === "visible") {
-          setError(
-            "If you are still on this page, the payment did not start — try again."
-          );
+  async function handlePayment() {
+    paymentMutation.mutate(undefined, {
+      onSuccess: (res: any) => {
+        if (!res?.payuParams) {
+          // fallback: show nothing here (caller handles UI)
+          return;
         }
-      }, 5000);
-    } catch (err: any) {
-      console.error("Checkout redirect error:", err);
-      setError(err?.message || "Checkout initiation failed");
-      setProcessing(false);
-    }
-  }
+        const payu = res.payuParams;
+        const mode = (
+          process.env.NEXT_PUBLIC_PAYU_MODE || "sandbox"
+        ).toLowerCase();
+        const payuAction =
+          mode === "prod"
+            ? "https://secure.payu.in/_payment"
+            : "https://sandboxsecure.payu.in/_payment";
 
-  if (loading) {
-    return (
-      <div className="p-6 text-center text-gray-600">Loading order...</div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6 text-red-600">
-        Error: {error}
-        <div className="mt-4">
-          <Button onClick={loadCart}>Retry</Button>
-        </div>
-      </div>
-    );
+        postToPayU(payuAction, payu);
+      },
+      onError: () => {
+        // mutation state can be observed by caller; keep UI minimal
+      },
+    });
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Checkout</h1>
+    <div className="max-w-3xl mx-auto p-6 space-y-6">
+      <div className="flex items-center gap-2">
+        <CreditCard className="w-6 h-6 text-primary" />
+        <h1 className="text-2xl font-bold">Checkout</h1>
+      </div>
 
-      {/* Order summary */}
-      <div className="border rounded-lg divide-y mb-4">
-        {items.map((item) => (
+      <div className="rounded-2xl shadow-sm divide-y divide-gray-100 bg-white border border-gray-100">
+        {items.map((item: any) => (
           <div
             key={item.itemId}
-            className="flex justify-between items-center p-4"
+            className="flex justify-between items-center p-4 hover:bg-gray-50 transition"
           >
             <div>
-              <div className="font-semibold capitalize">
-                {item.itemType === "course" ? "Course" : "Chapter"}
+              <div className="font-medium text-gray-800">{item.name}</div>
+              <div className="text-gray-500 text-sm capitalize">
+                {item.itemType}
               </div>
-              <div className="text-gray-500 text-sm">ID: {item.itemId}</div>
-              <div className="text-sm text-gray-400">
-                Added: {new Date(item.addedAt).toLocaleDateString()}
-              </div>
+              {item.addedAt && (
+                <div className="text-xs text-gray-400">
+                  Added: {new Date(item.addedAt).toLocaleString()}
+                </div>
+              )}
             </div>
-            <div className="font-bold text-lg">₹{item.price}</div>
+            <div className="font-semibold text-lg text-gray-900">
+              ₹{item.price}
+            </div>
           </div>
         ))}
       </div>
 
-      <div className="text-right mb-6 font-bold text-xl">Total: ₹{total}</div>
+      {/* Coupon summary (read-only on checkout) */}
+      {coupon && (
+        <div className="mt-4 bg-green-50 border border-green-100 rounded-lg p-3 flex items-center justify-between">
+          <div className="text-sm text-green-800">
+            <strong>{coupon.code}</strong> applied — saved ₹{coupon.discount}
+          </div>
+        </div>
+      )}
 
-      <div className="flex gap-3">
-        <Button
-          onClick={handleCheckoutRedirect}
-          disabled={processing || items.length === 0}
-        >
-          {processing ? "Starting payment..." : "Pay Now"}
-        </Button>
+      {/* Summary */}
+      <div className="flex justify-between items-center mt-4 bg-gray-50 p-4 rounded-xl">
+        <div>
+          <div className="text-sm text-gray-600">Subtotal: ₹{total}</div>
+          {discount > 0 && (
+            <div className="text-sm text-green-600">Discount: -₹{discount}</div>
+          )}
+          <div className="text-xl font-semibold">Payable: ₹{payable}</div>
+        </div>
+
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => router.push("/cart")}
+            className="flex items-center gap-1"
+          >
+            Back to Cart
+          </Button>
+
+          <Button
+            onClick={handlePayment}
+            disabled={paymentMutation.isPending || items.length === 0}
+            className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white"
+          >
+            {paymentMutation.isPending ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Processing…
+              </div>
+            ) : (
+              <>
+                <ShieldCheck className="w-4 h-4" />
+                Pay ₹{payable}
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
-      {error && <div className="mt-4 text-red-600">{error}</div>}
+      <div className="flex items-center justify-center gap-2 text-gray-500 mt-3 text-sm">
+        <Receipt className="w-4 h-4" />
+        Payments secured & encrypted, powered by PayU
+      </div>
     </div>
   );
 }

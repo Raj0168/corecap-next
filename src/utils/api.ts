@@ -3,7 +3,7 @@ import axios from "axios";
 import { toastGlobal } from "../app/(site)/components/ui/toast";
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || ".",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "https://www.corecapmaths.in/api",
   headers: { "Content-Type": "application/json" },
   withCredentials: true,
 });

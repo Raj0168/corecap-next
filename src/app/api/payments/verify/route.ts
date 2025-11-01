@@ -1,3 +1,4 @@
+// /api/payments/verify/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import connectDB from "@/lib/db";
@@ -5,6 +6,7 @@ import Payment from "@/models/Payment";
 import Purchase from "@/models/Purchase";
 import User from "@/models/User";
 import Cart from "@/models/Cart";
+import Coupon from "@/models/Coupon";
 import qs from "querystring";
 
 export async function POST(req: NextRequest) {
@@ -14,24 +16,14 @@ export async function POST(req: NextRequest) {
     let body: any;
     const contentType = req.headers.get("content-type") || "";
 
-    const isRedirectFlow =
-      contentType.includes("application/x-www-form-urlencoded") ||
-      contentType.includes("text/plain");
-
     if (contentType.includes("application/json")) {
-      body = await req.json(); // Bolt flow
-    } else if (isRedirectFlow) {
-      const text = await req.text();
-      body = qs.parse(text); // redirect/POST
+      body = await req.json();
     } else {
-      return NextResponse.json(
-        { error: "Unsupported content type" },
-        { status: 400 }
-      );
+      const text = await req.text();
+      body = qs.parse(text);
     }
 
     const { txnid, status, amount, hash, email, firstname, productinfo } = body;
-
     if (!txnid || !status || !amount || !hash)
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
@@ -44,23 +36,23 @@ export async function POST(req: NextRequest) {
       .update(hashSequence)
       .digest("hex");
 
-    if (calculatedHash !== hash) {
-      if (isRedirectFlow) {
-        return redirectHtml("/payment/failure");
-      }
-      return NextResponse.json({ error: "Invalid hash" }, { status: 400 });
-    }
-
     const payment = await Payment.findOne({ txnid });
     const purchase = await Purchase.findById(payment?.purchaseId);
     const user = await User.findById(payment?.userId);
 
-    if (!payment || !purchase || !user) {
-      if (isRedirectFlow) return redirectHtml("/payment/failure");
+    if (!payment || !purchase || !user)
       return NextResponse.json(
-        { error: "Payment or Purchase/User not found" },
+        { error: "Invalid transaction" },
         { status: 404 }
       );
+
+    const isRedirect =
+      contentType.includes("application/x-www-form-urlencoded") ||
+      contentType.includes("text/plain");
+
+    if (calculatedHash !== hash) {
+      if (isRedirect) return redirectHtml("/payment/failure");
+      return NextResponse.json({ error: "Invalid hash" }, { status: 400 });
     }
 
     if (status === "success") {
@@ -71,6 +63,13 @@ export async function POST(req: NextRequest) {
         if (item.itemType === "course")
           user.purchasedCourses?.push(item.itemId);
         else user.purchasedChapters?.push(item.itemId);
+      }
+
+      if (purchase.couponCode) {
+        await Coupon.updateOne(
+          { code: purchase.couponCode },
+          { $inc: { usedCount: 1 } }
+        );
       }
 
       await Cart.deleteOne({ userId: user._id });
@@ -84,7 +83,7 @@ export async function POST(req: NextRequest) {
     await purchase.save();
     await user.save();
 
-    if (isRedirectFlow) {
+    if (isRedirect) {
       return redirectHtml(
         status === "success" ? "/payment/success" : "/payment/failure"
       );
@@ -97,18 +96,9 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Helper: send a small HTML page that redirects the user
 function redirectHtml(url: string) {
   const html = `
-    <html>
-      <head>
-        <meta http-equiv="refresh" content="0; URL='${url}'" />
-      </head>
-      <body>
-        <p>Redirecting to <a href="${url}">${url}</a>...</p>
-        <script>window.location.href='${url}'</script>
-      </body>
-    </html>
-  `;
+    <html><head><meta http-equiv="refresh" content="0; URL='${url}'" /></head>
+    <body><script>window.location.href='${url}'</script></body></html>`;
   return new NextResponse(html, { headers: { "Content-Type": "text/html" } });
 }

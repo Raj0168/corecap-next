@@ -6,7 +6,7 @@ export default function LoginPage() {
   return (
     <AuthCard
       title="Welcome Back :)"
-      imageUrl="/image-2.webp" 
+      imageUrl="/login-image.webp" 
     >
       <p className="text-gray-500 text-center mb-6">
         To keep connected, please login with your personal info.
