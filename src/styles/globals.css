@@ -46,3 +46,36 @@ body {
 .animate-fade-in-up {
   animation: fade-in-up 0.3s ease-out;
 }
+
+/* modern-scroll class */
+.modern-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.4) transparent;
+  scroll-behavior: smooth;
+}
+
+.modern-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modern-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modern-scroll::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.4);
+  border-radius: 10px;
+}
+
+.modern-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.6);
+}
+
+.icon-btn {
+  @apply bg-gray-100 hover:bg-gray-200 rounded-md p-1 transition;
+}
+
+.floating-nav {
+  @apply absolute top-1/2 -translate-y-1/2 z-20 bg-white border shadow-md
+         rounded-full p-2 hover:scale-110 transition;
+}

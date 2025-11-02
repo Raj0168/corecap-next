@@ -19,8 +19,9 @@ import { useAddToCart } from "@/hooks/useCart";
 
 function CourseSkeleton() {
   return (
-    <div className="p-6 flex gap-6">
-      <div className="w-60 h-40 bg-gray-200 rounded-xl animate-pulse" />
+    <div className="p-4 md:p-6 flex flex-col md:flex-row gap-4 md:gap-6">
+      <div className="w-full md:w-1/2 aspect-[4/3] bg-gray-200 rounded-xl animate-pulse" />
+
       <div className="flex-1 space-y-3">
         <div className="h-6 bg-gray-200 w-3/4 rounded animate-pulse" />
         <div className="h-4 bg-gray-200 w-full rounded animate-pulse" />
@@ -100,117 +101,178 @@ export default function CourseDetailPage() {
           <CourseSkeleton />
         ) : (
           <>
-            <div className="w-full md:w-1/2 h-64 md:h-80 lg:h-96 relative rounded-xl overflow-hidden bg-gray-100">
+            <div className="w-full md:w-1/2 h-64 md:h-80 lg:h-96 relative rounded-xl overflow-hidden bg-gray-200">
               <img
                 loading="lazy"
                 src="/course-image.webp"
                 alt={course.title}
                 className="w-full h-full object-cover"
               />
+
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+              <div className="absolute bottom-4 left-4 right-4 text-white z-10 space-y-3">
+                <p className="text-2xl md:text-3xl font-bold tracking-tight">
+                  ₹{course.price}
+                </p>
+
+                {course.hasAccess ? (
+                  <Button
+                    className="w-full sm:w-auto bg-white/90 text-black font-semibold backdrop-blur hover:bg-white"
+                    onClick={() =>
+                      handleDownload(
+                        `/api/courses/${course.slug}/download`,
+                        `${course.slug}-course.pdf`
+                      )
+                    }
+                  >
+                    <Download className="mr-2 h-4 w-4" /> Download Full Course
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full sm:w-auto bg-white/90 text-black font-semibold backdrop-blur hover:bg-white"
+                    disabled={addingId === course._id || cartHasChapter}
+                    onClick={() =>
+                      addToCart(
+                        course._id ?? (course as any).id ?? course.slug,
+                        "course"
+                      )
+                    }
+                  >
+                    {addingId === course._id
+                      ? "Adding..."
+                      : cartHasChapter
+                      ? "Cannot buy course: cart has chapters"
+                      : "Buy Full Course"}
+                  </Button>
+                )}
+              </div>
             </div>
 
-            <section className="mt-4 md:mt-6 text-gray-700">
-              <h2 className="text-xl md:text-2xl font-semibold text-gray-900">
-                Course Description
-              </h2>
+            <div className="flex-1">
+              <div className="h-64 md:h-80 lg:h-96 overflow-y-auto pr-2 modern-scroll">
+                <h1 className="text-3xl md:text-4xl font-bold">
+                  {course.title}
+                </h1>
 
-              {/* Intro */}
-              <p className="mt-3 text-sm md:text-base leading-7">
-                CoreCap Maths offers a focused, time-efficient way to master
-                Class 10 CBSE Mathematics — designed for students who value
-                clarity, structure, and precision over endless material.
-              </p>
+                <p className="mt-2 text-gray-800 font-semibold">
+                  By {course.author}
+                </p>
 
-              <div className="mt-4 md:mt-6">
-                <h3 className="text-sm md:text-base font-medium text-gray-900">
-                  You’ll get:
-                </h3>
+                <section className="mt-4 md:mt-6 text-gray-700">
+                  <h2 className="text-xl md:text-2xl font-semibold text-gray-900">
+                    Course Description
+                  </h2>
 
-                <ul className="mt-2 space-y-2">
-                  <li className="flex items-start">
-                    <span className="mr-3 mt-1 text-indigo-600 font-bold">
-                      —
-                    </span>
-                    <span className="text-sm md:text-base leading-6">
-                      <strong>Concise Concept Notes:</strong> Compact summaries
-                      for all 14 chapters.
-                    </span>
-                  </li>
+                  <p className="mt-3 text-sm md:text-base leading-7">
+                    CoreCap Maths offers a focused, time-efficient way to master
+                    Class 10 CBSE Mathematics — designed for students who value
+                    clarity, structure, and precision over endless material.
+                  </p>
 
-                  <li className="flex items-start">
-                    <span className="mr-3 mt-1 text-indigo-600 font-bold">
-                      —
-                    </span>
-                    <span className="text-sm md:text-base leading-6">
-                      <strong>Types of Questions:</strong> High-value,
-                      exam-focused questions with approach guidance.
-                    </span>
-                  </li>
-
-                  <li className="flex items-start">
-                    <span className="mr-3 mt-1 text-indigo-600 font-bold">
-                      —
-                    </span>
-                    <span className="text-sm md:text-base leading-6">
-                      <strong>Strategic Coverage:</strong> Know what to study,
-                      revise & skip.
-                    </span>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Break here — visible always */}
-              <p className="mt-4 text-sm md:text-base leading-7 font-semibold">
-                Whether you're revising before exams or brushing up before tests
-                — this course gives you smart, structured and stress-free
-                preparation.
-              </p>
-
-              {/* Expandable section */}
-              <details className="mt-3 cursor-pointer text-sm md:text-base leading-7">
-                <summary className="text-indigo-600 underline hover:text-indigo-700 font-medium">
-                  Show full details
-                </summary>
-
-                <div className="mt-3 space-y-4">
-                  <p>Smart Revision. Focused Effort. Confident Results.</p>
-
-                  <div>
+                  <div className="mt-4 md:mt-6">
                     <h3 className="text-sm md:text-base font-medium text-gray-900">
-                      Who This Course Is For
+                      You’ll get:
                     </h3>
+
                     <ul className="mt-2 space-y-2">
                       <li className="flex items-start">
                         <span className="mr-3 mt-1 text-indigo-600 font-bold">
                           —
                         </span>
-                        <span>
-                          Class 10 CBSE students preparing for the 2026 boards.
+                        <span className="text-sm md:text-base leading-6">
+                          <strong>Concise Concept Notes:</strong> Compact
+                          summaries for all 14 chapters — complete, clear and
+                          designed to strengthen understanding without overload.
                         </span>
                       </li>
+
                       <li className="flex items-start">
                         <span className="mr-3 mt-1 text-indigo-600 font-bold">
                           —
                         </span>
-                        <span>
-                          Learners who want efficient revision, not bulky
-                          textbooks.
+                        <span className="text-sm md:text-base leading-6">
+                          <strong>Types of Questions:</strong> A handpicked set
+                          of high-value questions for each chapter aligned with
+                          the CBSE 2026 pattern — each explained with the “how
+                          to approach” thought process.
                         </span>
                       </li>
+
                       <li className="flex items-start">
                         <span className="mr-3 mt-1 text-indigo-600 font-bold">
                           —
                         </span>
-                        <span>
-                          Students who want to understand concepts, not memorize
-                          steps.
+                        <span className="text-sm md:text-base leading-6">
+                          <strong>Strategic Coverage:</strong> Every topic is
+                          planned with purpose, so you know exactly what to
+                          study, what to revise, and what to skip.
+                        </span>
+                      </li>
+
+                      <li className="flex items-start">
+                        <span className="mr-3 mt-1 text-indigo-600 font-bold">
+                          —
+                        </span>
+                        <span className="text-sm md:text-base leading-6">
+                          <strong>Exclusive A&amp;R chapter:</strong> Assertion
+                          &amp; Reasoning exercises to develop deep conceptual
+                          understanding and logical thinking.
                         </span>
                       </li>
                     </ul>
                   </div>
-                </div>
-              </details>
-            </section>
+
+                  <p className="mt-4 text-sm md:text-base leading-7">
+                    Whether you’re revising before exams, brushing up before
+                    tests, or seeking full confidence in tricky topics, this
+                    course turns revision into a guided, smart, and stress-free
+                    experience.
+                  </p>
+
+                  <p className="mt-3 text-sm md:text-base font-semibold text-gray-900">
+                    Smart Revision. Focused Effort. Confident Results.
+                  </p>
+
+                  <div className="mt-5 md:mt-6">
+                    <h3 className="text-sm md:text-base font-medium text-gray-900">
+                      Who This Course Is For
+                    </h3>
+
+                    <ul className="mt-2 space-y-2">
+                      <li className="flex items-start">
+                        <span className="mr-3 mt-1 text-indigo-600 font-bold">
+                          —
+                        </span>
+                        <span className="text-sm md:text-base leading-6">
+                          Class 10 CBSE students preparing for the 2026 Board
+                          Exams.
+                        </span>
+                      </li>
+
+                      <li className="flex items-start">
+                        <span className="mr-3 mt-1 text-indigo-600 font-bold">
+                          —
+                        </span>
+                        <span className="text-sm md:text-base leading-6">
+                          Learners who prefer structured, efficient revision
+                          over bulky textbooks and endless question banks.
+                        </span>
+                      </li>
+
+                      <li className="flex items-start">
+                        <span className="mr-3 mt-1 text-indigo-600 font-bold">
+                          —
+                        </span>
+                        <span className="text-sm md:text-base leading-6">
+                          Students who want to understand the why and how behind
+                          each solution, not just memorize steps.
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+                </section>
+              </div>
+            </div>
           </>
         )}
       </div>
