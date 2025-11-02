@@ -1,3 +1,4 @@
+// Updated ChapterViewerPage with skeleton and back button with icon
 "use client";
 
 import React from "react";
@@ -6,6 +7,7 @@ import PdfViewer from "@/app/(site)/components/ui/PdfViewer";
 import { Button } from "@/app/(site)/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/utils/api";
+import { ArrowLeft } from "lucide-react";
 
 interface ChapterResp {
   id: string;
@@ -32,18 +34,25 @@ export default function ChapterViewerPage() {
   } = useQuery<ChapterResp, Error>({
     queryKey: ["chapter", slug, chapterSlug],
     queryFn: async () => {
-      const res = await api.get<ChapterResp>(
+      const res = await api.get(
         `/courses/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(
           chapterSlug
         )}`
       );
       return res.data;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     retry: 1,
   });
 
-  if (isLoading) return <div className="p-6">Loading chapter…</div>;
+  if (isLoading)
+    return (
+      <div className="p-6 animate-pulse space-y-4">
+        <div className="h-8 w-48 bg-gray-200 rounded" /> {/* fake title */}
+        <div className="h-[60vh] bg-gray-200 rounded" /> {/* fake pdf */}
+      </div>
+    );
+
   if (isError || !chapter)
     return (
       <div className="p-6 text-red-600">
@@ -60,8 +69,18 @@ export default function ChapterViewerPage() {
   const viewerFilename = chapter.signedUrl ? chapter.signedUrl : fileObjName;
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">{chapter.title}</h1>
+    <div className="p-2">
+      {/* Header with Back */}
+      <div className="flex items-center gap-3 mb-4">
+        <Button
+          variant="outline"
+          onClick={() => router.back()}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </Button>
+        <h1 className="text-2xl font-bold">{chapter.title}</h1>
+      </div>
 
       <PdfViewer filename={viewerFilename} className="min-h-[60vh]" />
 
@@ -79,9 +98,6 @@ export default function ChapterViewerPage() {
             Download PDF
           </Button>
         )}
-        <Button variant="outline" onClick={() => router.back()}>
-          Back
-        </Button>
       </div>
     </div>
   );
