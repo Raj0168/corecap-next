@@ -83,10 +83,18 @@ export default function CoursesPage() {
             <h2 className="text-lg font-semibold line-clamp-1">
               {course.title}
             </h2>
+
             <p className="text-sm text-gray-600 line-clamp-2 mt-1">
               {course.description}
             </p>
-            <p className="text-md font-bold mt-2">₹{course.price}</p>
+
+            <div className="flex items-center gap-2 mt-2">
+              <p className="text-md font-bold">₹{course.price}</p>
+              <p className="text-sm text-gray-500 line-through">
+                ₹{course.price + 200}
+              </p>
+            </div>
+
             <Link href={`/courses/${course.slug}`}>
               <Button className="mt-3 w-full">View Details</Button>
             </Link>
