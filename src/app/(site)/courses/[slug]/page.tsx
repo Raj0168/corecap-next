@@ -111,9 +111,14 @@ export default function CourseDetailPage() {
 
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
               <div className="absolute bottom-4 left-4 right-4 text-white z-10 space-y-3">
-                <p className="text-2xl md:text-3xl font-bold tracking-tight">
-                  ₹{course.price}
-                </p>
+                <div className="flex items-center gap-3">
+                  <p className="text-2xl md:text-3xl font-bold tracking-tight">
+                    ₹{course.price}
+                  </p>
+                  <p className="text-sm md:text-base line-through">
+                    ₹{course.price + 200}
+                  </p>
+                </div>
 
                 {course.hasAccess ? (
                   <Button
@@ -129,7 +134,7 @@ export default function CourseDetailPage() {
                   </Button>
                 ) : (
                   <Button
-                    className="w-full sm:w-auto bg-white/90 text-black font-semibold backdrop-blur hover:bg-white"
+                    className="w-full md:w-auto"
                     disabled={addingId === course._id || cartHasChapter}
                     onClick={() =>
                       addToCart(
@@ -153,10 +158,6 @@ export default function CourseDetailPage() {
                 <h1 className="text-3xl md:text-4xl font-bold">
                   {course.title}
                 </h1>
-
-                <p className="mt-2 text-gray-800 font-semibold">
-                  By {course.author}
-                </p>
 
                 <section className="mt-4 md:mt-6 text-gray-700">
                   <h2 className="text-xl md:text-2xl font-semibold text-gray-900">
