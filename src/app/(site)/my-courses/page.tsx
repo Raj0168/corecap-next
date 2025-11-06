@@ -36,7 +36,6 @@ export default function DashboardPage() {
   const router = useRouter();
   const { data: user, isLoading, isError } = useMe();
 
-  // --- Download modal state ---
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [downloadFilename, setDownloadFilename] = useState<string>("");
 
@@ -88,6 +87,15 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="mt-3 sm:mt-0 flex flex-col sm:flex-row gap-2">
+                  <Button
+                    className="flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-[#0a2342]"
+                    onClick={() =>
+                      (window.location.href = `/courses/${course.slug}`)
+                    }
+                  >
+                    <Eye className="h-4 w-4" /> View Course
+                  </Button>
+
                   <Button
                     className="flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-[#0a2342]"
                     onClick={() =>
