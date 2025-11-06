@@ -85,21 +85,23 @@ export default function Sidebar() {
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Top Section */}
         <div className="flex flex-col">
-          {/* Logo + Brand */}
           <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-4 shadow-sm">
-            <img
-              loading="lazy"
-              src="/logo-l.webp"
-              alt="Logo"
-              width={40}
-              height={40}
-              className="object-contain"
-            />
+            <div className="bg-white rounded-full flex items-center justify-center shadow-sm">
+              <img
+                loading="lazy"
+                src="/logo-l.webp"
+                alt="Logo"
+                width={40}
+                height={40}
+                className="object-contain"
+              />
+            </div>
+
             <span className="text-xl font-semibold tracking-wide text-yellow-400">
-              Co<span className="text-yellow-200">Recap</span>Maths
+              CoreCap&nbsp;<span className="text-white">Maths</span>
             </span>
+
             <button
               className="ml-auto p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
               onClick={() => setOpen(false)}

@@ -33,7 +33,7 @@ const Footer = () => {
               className="object-contain"
             />
           </div>
-          <span className="hidden md:inline text-xl font-semibold tracking-wide text-yellow-400">
+          <span className="text-xl font-semibold tracking-wide text-yellow-400">
             CoreCap&nbsp;<span className="text-white">Maths</span>
           </span>
         </div>
@@ -80,7 +80,7 @@ const Footer = () => {
               <Instagram className="w-5 h-5" />
             </a>
             <a
-              href="https://www.facebook.com/share/corecapmaths"
+              href="https://www.facebook.com/share/16d7Wam1mw/?mibextid=wwXIfr"
               target="_blank"
               rel="noopener noreferrer"
               className="text-yellow-400 hover:text-yellow-500 transition-colors"
