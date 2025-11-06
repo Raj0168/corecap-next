@@ -22,22 +22,22 @@ const Footer = () => {
   return (
     <footer className="bg-[#0a2342] text-white border-t-4 border-yellow-400 py-8 px-4">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:justify-between sm:items-center gap-6 flex-wrap">
-        {/* Logo + Brand */}
         <div className="flex items-center gap-2">
-          <img
-            loading="lazy"
-            src="/logo-l.webp"
-            alt="Logo"
-            width={50}
-            height={50}
-            className="object-contain"
-          />
+          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center overflow-hidden">
+            <img
+              loading="lazy"
+              src="/logo-l.webp"
+              alt="Logo"
+              width={40}
+              height={40}
+              className="object-contain"
+            />
+          </div>
           <span className="hidden md:inline text-xl font-semibold tracking-wide text-yellow-400">
-            Co<span className="text-yellow-200">Recap</span>Maths
+            CoreCap&nbsp;<span className="text-white">Maths</span>
           </span>
         </div>
 
-        {/* Footer Links */}
         <div className="flex flex-wrap justify-start sm:justify-center gap-4">
           {links.map((text) => (
             <Link
@@ -86,14 +86,6 @@ const Footer = () => {
               className="text-yellow-400 hover:text-yellow-500 transition-colors"
             >
               <Facebook className="w-5 h-5" />
-            </a>
-            <a
-              href="https://www.youtube.com/@corecapmaths"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-yellow-400 hover:text-yellow-500 transition-colors"
-            >
-              <Youtube className="w-5 h-5" />
             </a>
           </div>
         </div>

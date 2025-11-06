@@ -74,7 +74,6 @@ export default function PurchasesPage() {
           key={purchase._id}
           className="p-4 rounded-xl shadow flex flex-col md:flex-row justify-between items-start md:items-center transition hover:shadow-lg"
         >
-          {/* Left Section — Purchase Info */}
           <div className="flex-1 pr-0 md:pr-6 w-full space-y-1">
             <div className="flex items-center gap-2">
               <BadgeIndianRupee className="h-5 w-5 text-gray-500" />

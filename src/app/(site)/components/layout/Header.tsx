@@ -35,16 +35,18 @@ export default function Header() {
           href="/"
           className="flex-1 flex items-center justify-center md:justify-start gap-2"
         >
-          <img
-            loading="lazy"
-            src="/logo-l.webp"
-            alt="Logo"
-            width={50}
-            height={50}
-            className="object-contain"
-          />
+          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center overflow-hidden">
+            <img
+              loading="lazy"
+              src="/logo-l.webp"
+              alt="Logo"
+              width={40}
+              height={40}
+              className="object-contain"
+            />
+          </div>
           <span className="hidden md:inline text-xl font-semibold tracking-wide text-yellow-400">
-            Co<span className="text-yellow-200">Recap</span>Maths
+            CoreCap&nbsp;<span className="text-white">Maths</span>
           </span>
         </Link>
 

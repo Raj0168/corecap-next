@@ -137,7 +137,7 @@ export default function Sidebar() {
             ) : (
               <>
                 <Link
-                  href="/explore"
+                  href="/courses"
                   className="block hover:text-yellow-500 transition"
                   onClick={() => setOpen(false)}
                 >
