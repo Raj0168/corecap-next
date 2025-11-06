@@ -116,7 +116,7 @@ export default function CourseDetailPage() {
                     ₹{course.price}
                   </p>
                   <p className="text-sm md:text-base line-through">
-                    ₹{course.price + 200}
+                    ₹{course.price + 300}
                   </p>
                 </div>
 

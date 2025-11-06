@@ -91,7 +91,7 @@ export default function CoursesPage() {
             <div className="flex items-center gap-2 mt-2">
               <p className="text-md font-bold">₹{course.price}</p>
               <p className="text-sm text-gray-500 line-through">
-                ₹{course.price + 200}
+                ₹{course.price + 300}
               </p>
             </div>
 
