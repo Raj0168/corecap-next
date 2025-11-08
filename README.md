@@ -12,7 +12,7 @@
 
 ## Overview
 
-**Corecap** is an MVP EdTech platform built with the **T3 stack** — combining **Next.js**, **Tailwind CSS**, and **TypeScript** — along with modern cloud and payment technologies.  
+**Corecap** is an EdTech platform built with the **T3 stack** — combining **Next.js**, **Tailwind CSS**, and **TypeScript** — along with modern cloud and payment technologies.  
 It provides a full-featured solution for creating, managing, and selling online courses with secure authentication, payments, and efficient content delivery.
 
 ---
