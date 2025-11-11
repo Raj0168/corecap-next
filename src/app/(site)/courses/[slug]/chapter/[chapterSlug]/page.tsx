@@ -83,22 +83,6 @@ export default function ChapterViewerPage() {
       </div>
 
       <PdfViewer filename={viewerFilename} className="min-h-[60vh]" />
-
-      <div className="mt-4 flex gap-2">
-        {chapter.hasAccess && chapter.pdfPath && (
-          <Button
-            variant="outline"
-            onClick={() => {
-              const url = chapter.signedUrl
-                ? chapter.signedUrl
-                : `/api/pdf?filename=${encodeURIComponent(chapter.pdfPath!)}`;
-              window.open(url, "_blank");
-            }}
-          >
-            Download PDF
-          </Button>
-        )}
-      </div>
     </div>
   );
 }
