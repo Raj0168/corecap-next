@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     title: "CorecapMaths – Smartly Revised Class 10 Maths",
     description:
       "Master Class 10 Maths through compact PDFs. Only what matters — theory + must-do questions.",
-    url: "https://corecapmaths.in",
+    url: "https://www.corecapmaths.in/",
     siteName: "CorecapMaths",
     images: [
       {
@@ -50,9 +50,9 @@ export const metadata: Metadata = {
       "Master Class 10 Maths with concise PDFs, must-do questions, and expert-curated content.",
     images: ["/logo-l.webp"],
   },
-  metadataBase: new URL("https://corecapmaths.in"),
+  metadataBase: new URL("https://www.corecapmaths.in/"),
   alternates: {
-    canonical: "https://corecapmaths.in",
+    canonical: "https://www.corecapmaths.in/",
   },
   icons: {
     icon: "/favicon.ico",
@@ -68,12 +68,6 @@ export default async function RootLayout({
   children: ReactNode;
   modal?: ReactNode;
 }) {
-  const isAdmin =
-    typeof window === "undefined" &&
-    process.env.NODE_ENV !== "test" &&
-    typeof globalThis.window === "undefined" &&
-    globalThis.location?.pathname.startsWith("/admin");
-
   const cookieStore = cookies();
   const token = (await cookieStore).get("accessToken")?.value;
 
@@ -86,14 +80,31 @@ export default async function RootLayout({
     }
   }
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "CorecapMaths",
+    url: "https://www.corecapmaths.in",
+    logo: "https://www.corecapmaths.in/logo-l.webp",
+    sameAs: ["https://www.instagram.com/corecapmaths/"],
+    description:
+      "CorecapMaths offers compact, expert-curated Class 10 Maths PDFs — master theory and must-do questions efficiently.",
+  };
+
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className="flex flex-col min-h-screen">
         <Providers initialUser={user}>
           <ToastProvider>
-            {!isAdmin && <Header />}
+            <Header />
             <main className="flex-1">{children}</main>
-            {!isAdmin && <Footer />}
+            <Footer />
           </ToastProvider>
         </Providers>
       </body>
