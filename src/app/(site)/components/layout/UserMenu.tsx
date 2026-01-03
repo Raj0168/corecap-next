@@ -81,12 +81,12 @@ export default function UserMenu({
 
       {open && loggedIn && (
         <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 text-gray-800 dark:text-white rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
-          <button
+          {/* <button
             className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
             onClick={() => handleLinkClick("/purchases")}
           >
             Purchases
-          </button>
+          </button> */}
 
           {/* <button
             className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
