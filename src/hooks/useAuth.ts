@@ -64,12 +64,11 @@ export const useMe = () =>
     queryFn: async () => {
       const res = await api.get("/auth/me");
       const user = res.data.user;
-      const setUser = useAuthStore.getState().setUser;
-      setUser(user);
+      useAuthStore.getState().setUser(user);
       return user;
     },
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 10,
+    staleTime: 0,
+    gcTime: 0,
     refetchOnWindowFocus: false,
   });
 
